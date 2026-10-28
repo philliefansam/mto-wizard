@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Production build output
+dist/
+
+# Test output & screenshots
+test_screenshots/
+
+# Databases & local history
+*.db
+*.sqlite
+*.sqlite3
+hist.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

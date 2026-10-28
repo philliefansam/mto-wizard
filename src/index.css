@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-neu: #e0e5ec;
+  --shadow-dark: #bec3c9;
+  --shadow-light: #ffffff;
+  --text-primary: #2d3748;
+  --text-secondary: #4a5568;
+  --text-muted: #64748b;
+  --neu-accent: #1a73e8;
+  --neu-accent-glow: rgba(26, 115, 232, 0.35);
+  --paper-bg: #ffffff;
+  --paper-text: #1e293b;
+  --paper-border: #e2e8f0;
+}
+
+/* Google Material 3 (M3) Dark Theme: Neutral Dark Grey (#202124), NOT Pitch Black */
+html.dark,
+[data-theme="dark"] {
+  --bg-neu: #202124;
+  --shadow-dark: #17181a;
+  --shadow-light: #2b2d31;
+  --text-primary: #e8eaed;
+  --text-secondary: #bdc1c6;
+  --text-muted: #9aa0a6;
+  --neu-accent: #8ab4f8;
+  --neu-accent-glow: rgba(138, 180, 248, 0.35);
+  --paper-bg: #282a2d;
+  --paper-text: #e8eaed;
+  --paper-border: #3c4043;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background-color: var(--bg-neu);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Extruded Card Surface */
+.neu-flat {
+  background: var(--bg-neu);
+  border-radius: 18px;
+  box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Small Extruded Card */
+.neu-card-sm {
+  background: var(--bg-neu);
+  border-radius: 12px;
+  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Interactive Tactile Button */
+.neu-btn {
+  background: var(--bg-neu);
+  border-radius: 12px;
+  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  color: var(--text-primary);
+  transition: all 0.14s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+/* Only apply hover lift & extruded shadow if NOT selected/active */
+.neu-btn:hover:not(:disabled):not(.neu-btn-active):not(.active) {
+  box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+  transform: translateY(-1px);
+}
+.neu-btn:active:not(:disabled),
+.neu-btn-active,
+.neu-btn.neu-btn-active,
+.neu-btn.neu-btn-active:hover,
+.neu-btn-active:hover,
+.neu-btn.active,
+.neu-btn.active:hover {
+  background: var(--bg-neu) !important;
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light) !important;
+  transform: translateY(0) !important;
+  color: var(--neu-accent) !important;
+  font-weight: 600;
+}
+
+/* Primary Action Button (Flagship Blue with Neumorphic Lift) */
+.neu-btn-primary {
+  background: linear-gradient(145deg, #1d7cf2, #1868d1);
+  color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+  transition: all 0.14s ease;
+}
+.neu-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.neu-btn-primary:active:not(:disabled) {
+  box-shadow: inset 3px 3px 6px #0f458c, inset -3px -3px 6px #2790ff;
+  transform: translateY(0);
+}
+
+/* Pressed / Carved Input Well */
+.neu-pressed {
+  background: var(--bg-neu);
+  border-radius: 12px;
+  box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.neu-pressed:focus-within {
+  outline: 2px solid var(--neu-accent-glow);
+}
+
+/* Hide default browser date picker icon (using custom Google Material calendar icon instead) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  opacity: 0;
+}
+
+/* Segmented Pill Track */
+.neu-well {
+  background: var(--bg-neu);
+  border-radius: 9999px;
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+  padding: 6px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Google Material Symbols Rounded Setup */
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  user-select: none;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  transition: all 0.16s ease;
+}
+
+.material-symbols-rounded.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Tactile Neumorphic Icon Button Style from CodePen */
+.neu-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: var(--bg-neu);
+  border-radius: 12px;
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Only apply hover lift if NOT active/selected */
+.neu-icon-btn:hover:not(:disabled):not(.active):not(.neu-btn-active) {
+  box-shadow: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+  color: var(--neu-accent);
+  transform: translateY(-1px);
+}
+.neu-icon-btn:hover:not(:disabled):not(.active):not(.neu-btn-active) .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+.neu-icon-btn:active:not(:disabled),
+.neu-icon-btn.active,
+.neu-icon-btn.active:hover,
+.neu-icon-btn.neu-btn-active,
+.neu-icon-btn.neu-btn-active:hover {
+  background: var(--bg-neu) !important;
+  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light) !important;
+  color: var(--neu-accent) !important;
+  transform: translateY(0) !important;
+}
+.neu-icon-btn.active .material-symbols-rounded,
+.neu-icon-btn.active:hover .material-symbols-rounded,
+.neu-icon-btn.neu-btn-active .material-symbols-rounded,
+.neu-icon-btn.neu-btn-active:hover .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+}
+
+.neu-btn-primary .material-symbols-rounded {
+  color: #ffffff !important;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print Stylesheet: Hides Builder UI, Formats Right Panel as Exact Shop MTO Document */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0.5in;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    border: none !important;
+  }
+}
