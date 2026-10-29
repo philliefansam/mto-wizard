@@ -7,6 +7,9 @@ dist/
 # Test output & screenshots
 test_screenshots/
 
+# Development Data
+Development Data/
+
 # Databases & local history
 *.db
 *.sqlite
