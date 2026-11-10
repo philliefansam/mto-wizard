@@ -41,12 +41,13 @@ export default function MaterialWizard({ onAddItems }) {
   const [isCustomThickness, setIsCustomThickness] = useState(false);
   const [sides, setSides] = useState('2S'); // '2S' | '1S' | 'Raw Core Only'
 
-  // Laid Up Matrix Table State: rows = [4x8, 5x10, 5x12, customSize]
+  // Laid Up Matrix Table State: rows = [4x8, 5x10, 5x12, 61x109, customSize]
   const [customRowSize, setCustomRowSize] = useState('4x10');
   const [matrixData, setMatrixData] = useState({
     '4x8': { PB: '', MDF: '', PLY: '' },
     '5x10': { PB: '', MDF: '', PLY: '' },
     '5x12': { PB: '', MDF: '', PLY: '' },
+    '61x109': { PB: '', MDF: '', PLY: '' },
     custom: { PB: '', MDF: '', PLY: '' },
   });
 
@@ -160,6 +161,7 @@ export default function MaterialWizard({ onAddItems }) {
       { key: '4x8', size: '4x8' },
       { key: '5x10', size: '5x10' },
       { key: '5x12', size: '5x12' },
+      { key: '61x109', size: '61x109' },
       { key: 'custom', size: customRowSize.trim() || 'Custom' },
     ];
     const substrates = ['PB', 'MDF', 'PLY'];
@@ -203,6 +205,7 @@ export default function MaterialWizard({ onAddItems }) {
       '4x8': { PB: '', MDF: '', PLY: '' },
       '5x10': { PB: '', MDF: '', PLY: '' },
       '5x12': { PB: '', MDF: '', PLY: '' },
+      '61x109': { PB: '', MDF: '', PLY: '' },
       custom: { PB: '', MDF: '', PLY: '' },
     });
 
@@ -672,6 +675,7 @@ export default function MaterialWizard({ onAddItems }) {
                       { key: '4x8', label: '4x8' },
                       { key: '5x10', label: '5x10' },
                       { key: '5x12', label: '5x12' },
+                      { key: '61x109', label: '61x109 (MCP)' },
                     ].map((row) => (
                       <tr key={row.key} className="hover:bg-slate-100/40 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="py-2.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 font-mono">
@@ -790,7 +794,7 @@ export default function MaterialWizard({ onAddItems }) {
                 Laminate Sheet Size
               </label>
               <div className="flex flex-wrap items-center gap-1.5">
-                {['4x8', '5x10', '5x12'].map((sz) => (
+                {['4x8', '5x10', '5x12', '61x109'].map((sz) => (
                   <button
                     key={sz}
                     type="button"

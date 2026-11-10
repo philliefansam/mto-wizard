@@ -28,7 +28,7 @@ export function searchLaminates(query, limitPerBrand = 8) {
   }
 
   // Brand-targeted queries
-  const isWilsonartOnly = q.startsWith('wilsonart');
+  const isWilsonartOnly = q.startsWith('wilsonart') || q.startsWith('wa ');
   const isFormicaOnly = q.startsWith('formica');
 
   const wilsonartMatches = isFormicaOnly ? [] : searchWilsonart(query, limitPerBrand).map((item) => ({

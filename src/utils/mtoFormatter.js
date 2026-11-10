@@ -66,6 +66,7 @@ export function detectSubstrateFromName(name = '') {
   const u = String(name).toUpperCase();
   if (u.includes('BMCP')) return 'BMCP';
   if (u.includes('WMCP')) return 'WMCP';
+  if (u.includes('MCP') || u.includes('MELAMINE')) return 'MCP';
   if (u.includes('MDF')) return 'MDF';
   if (u.includes('PLY') || u.includes('WOOD') || u.includes('MAPLE') || u.includes('OAK') || u.includes('BIRCH')) return 'PLY';
   if (u.includes('CORIAN') || u.includes('SOLID SURFACE') || /\bSS\b/.test(u)) return 'SOLID SURFACE';
@@ -164,7 +165,11 @@ export function calculateComponentBreakdown(mtoItems = []) {
     const thickness = item.thickness ? item.thickness.trim() : '';
     const materialName = item.materialName ? item.materialName.trim() : 'Unspecified Material';
     const sheetSize = item.sheetSize ? item.sheetSize.trim() : '4x8';
-    const substrate = item.substrate ? item.substrate.trim() : 'PB';
+    let substrate = item.substrate ? item.substrate.trim() : 'PB';
+    // If sheet size is 61x109 (MCP) and substrate is default PB or empty, attribute to MCP
+    if (sheetSize === '61x109' && (substrate === 'PB' || !substrate)) {
+      substrate = 'MCP';
+    }
     const sides = (item.sides || '').trim().toUpperCase();
 
     if (item.category === 'laid_up') {
@@ -173,12 +178,28 @@ export function calculateComponentBreakdown(mtoItems = []) {
       substratesMap.set(subKey, (substratesMap.get(subKey) || 0) + qty);
 
       // 2. Face & Backer Sheets
+      // For 61x109 MCP boards, shops purchase 5x10 laminate sheets and trim off the last foot
+      const lamSheetSize = sheetSize === '61x109' ? '5x10' : sheetSize;
+      const faceName = item.faceLaminate || materialName;
+      const backName = item.backLaminate || item.faceLaminate || materialName;
+      const isSame2S = item.sameOnBothSides !== false;
+
       if (sides === '2S' || sides === 'GOOD 2 SIDES') {
-        const lamKey = `${materialName} (${sheetSize})`;
-        laminatesMap.set(lamKey, (laminatesMap.get(lamKey) || 0) + qty * 2);
+        if (!isSame2S && item.backLaminate && item.backLaminate !== item.faceLaminate) {
+          // Different laminates on face & back: 1 face sheet + 1 back sheet per board
+          const faceKey = `${faceName} (${lamSheetSize})`;
+          const backKey = `${backName} (${lamSheetSize})`;
+          laminatesMap.set(faceKey, (laminatesMap.get(faceKey) || 0) + qty * 1);
+          laminatesMap.set(backKey, (laminatesMap.get(backKey) || 0) + qty * 1);
+        } else {
+          // Same laminate on both sides: 2 decorative sheets per board
+          const lamKey = `${faceName} (${lamSheetSize})`;
+          laminatesMap.set(lamKey, (laminatesMap.get(lamKey) || 0) + qty * 2);
+        }
       } else if (sides === '1S' || sides === 'FACE + BACKER' || sides.includes('1S') || sides.includes('BACKER')) {
-        const faceKey = `${materialName} (${sheetSize})`;
-        const backerKey = `Standard Backer (${sheetSize}) [Shop Stock]`;
+        const faceKey = `${faceName} (${lamSheetSize})`;
+        const backerType = item.backerType || (item.substrate === 'WMCP' || item.substrate === 'MCP' ? 'WMCP' : 'Standard Backer');
+        const backerKey = `${backerType} (${lamSheetSize}) [Shop Stock]`;
         laminatesMap.set(faceKey, (laminatesMap.get(faceKey) || 0) + qty * 1);
         laminatesMap.set(backerKey, (laminatesMap.get(backerKey) || 0) + qty * 1);
       } else {
@@ -186,8 +207,10 @@ export function calculateComponentBreakdown(mtoItems = []) {
         // No laminate added
       }
     } else if (item.category === 'loose') {
-      // Direct loose laminate sheets
-      const lamKey = `${materialName} (${sheetSize})`;
+      // Direct loose laminate sheets (if 61x109 specified, maps to 5x10 for purchasing)
+      const lamSheetSize = sheetSize === '61x109' ? '5x10' : sheetSize;
+      const lamName = item.faceLaminate || materialName;
+      const lamKey = `${lamName} (${lamSheetSize})`;
       laminatesMap.set(lamKey, (laminatesMap.get(lamKey) || 0) + qty);
     } else if (item.category === 'solid_surface') {
       const ssKey = `${thickness} ${materialName} (${sheetSize})`.trim();

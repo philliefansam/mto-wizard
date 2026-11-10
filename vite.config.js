@@ -1,8 +1,28 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const pcUsername = process.env.USERNAME || process.env.USER || '';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function renameDistHtmlPlugin(customName = 'MTOwizard.html') {
+  return {
+    name: 'rename-dist-html',
+    enforce: 'post',
+    closeBundle() {
+      const distDir = path.resolve(__dirname, 'dist');
+      const oldFile = path.join(distDir, 'index.html');
+      const newFile = path.join(distDir, customName);
+      if (fs.existsSync(oldFile)) {
+        fs.renameSync(oldFile, newFile);
+        console.log(`[vite] Successfully created dist/${customName}`);
+      }
+    },
+  };
+}
 
 export default defineConfig({
   base: './',
@@ -10,9 +30,9 @@ export default defineConfig({
   plugins: [
     react(),
     viteSingleFile(),
+    renameDistHtmlPlugin('MTOwizard.html'),
   ],
   define: {
-    '__PC_USERNAME__': JSON.stringify(pcUsername),
     'process.env': {},
     'global': 'window',
   },

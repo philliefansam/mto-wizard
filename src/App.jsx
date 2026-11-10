@@ -4,6 +4,7 @@ import TopJobBar from './components/TopJobBar';
 import MaterialWizard from './components/MaterialWizard';
 import CutlistImporter from './components/CutlistImporter';
 import MtoDocumentPanel from './components/MtoDocumentPanel';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { getSystemUsername, formatUsernameAsEngineer } from './utils/fileSystem';
 
@@ -22,9 +23,6 @@ export default function App() {
     try {
       const saved = localStorage.getItem('mto_engineer');
       if (saved && saved !== 'Sam H') return saved;
-      if (typeof __PC_USERNAME__ !== 'undefined' && __PC_USERNAME__) {
-        return formatUsernameAsEngineer(__PC_USERNAME__);
-      }
       return '';
     } catch {
       return '';
@@ -41,8 +39,8 @@ export default function App() {
       }
     } catch {}
     return {
-      jobName: 'KOP RD BLD 12',
-      jobNumber: '180180-7',
+      jobName: '',
+      jobNumber: '',
       engineer: getInitialEngineer(),
       date: getTodayFormatted(),
       items: [],
@@ -180,85 +178,87 @@ export default function App() {
   };
 
   return (
-    <ToastProvider>
-      <div className="min-h-screen bg-neu-base text-slate-800 dark:text-slate-100 p-3 sm:p-5 lg:p-6 selection:bg-blue-600 selection:text-white transition-colors duration-200">
-        <div className="max-w-[1720px] mx-auto">
-          {/* Top Job Metadata & Actions Header */}
-          <TopJobBar
-            jobData={jobData}
-            setJobData={setJobData}
-            linkedFolder={linkedFolder}
-            setLinkedFolder={setLinkedFolder}
-            detectedFiles={detectedFiles}
-            setDetectedFiles={setDetectedFiles}
-            onReset={handleReset}
-            themeMode={themeMode}
-            setThemeMode={setThemeMode}
-            effectiveTheme={effectiveTheme}
-          />
+    <ErrorBoundary>
+      <ToastProvider>
+        <div className="min-h-screen bg-neu-base text-slate-800 dark:text-slate-100 p-3 sm:p-5 lg:p-6 selection:bg-blue-600 selection:text-white transition-colors duration-200">
+          <div className="max-w-[1720px] mx-auto">
+            {/* Top Job Metadata & Actions Header */}
+            <TopJobBar
+              jobData={jobData}
+              setJobData={setJobData}
+              linkedFolder={linkedFolder}
+              setLinkedFolder={setLinkedFolder}
+              detectedFiles={detectedFiles}
+              setDetectedFiles={setDetectedFiles}
+              onReset={handleReset}
+              themeMode={themeMode}
+              setThemeMode={setThemeMode}
+              effectiveTheme={effectiveTheme}
+            />
 
-          {/* Split Workspace Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* ================= LEFT PANEL: INFLOW BUILDER (58% ~ 7 cols) ================= */}
-            <div className="lg:col-span-7 space-y-4 no-print">
-              {/* Top Inflow Tab Switcher */}
-              <div className="neu-flat p-2 flex items-center justify-between">
-                <div className="neu-well inline-flex p-1 gap-1 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => setActiveLeftTab('wizard')}
-                    className={`flex-1 sm:flex-initial py-2 px-5 rounded-full text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                      activeLeftTab === 'wizard'
-                        ? 'neu-btn-active text-blue-700 dark:text-blue-400'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    <Icon name="bolt" className="text-lg text-blue-600 dark:text-blue-400" />
-                    <span>Material Wizard</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLeftTab('nesting')}
-                    className={`flex-1 sm:flex-initial py-2 px-5 rounded-full text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                      activeLeftTab === 'nesting'
-                        ? 'neu-btn-active text-blue-700 dark:text-blue-400'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    <Icon name="dashboard_customize" className="text-lg text-indigo-600 dark:text-indigo-400" />
-                    <span>CV Cutlist + Nesting</span>
-                  </button>
+            {/* Split Workspace Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* ================= LEFT PANEL: INFLOW BUILDER (58% ~ 7 cols) ================= */}
+              <div className="lg:col-span-7 space-y-4 no-print">
+                {/* Top Inflow Tab Switcher */}
+                <div className="neu-flat p-2 flex items-center justify-between">
+                  <div className="neu-well inline-flex p-1 gap-1 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setActiveLeftTab('wizard')}
+                      className={`flex-1 sm:flex-initial py-2 px-5 rounded-full text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                        activeLeftTab === 'wizard'
+                          ? 'neu-btn-active text-blue-700 dark:text-blue-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      <Icon name="bolt" className="text-lg text-blue-600 dark:text-blue-400" />
+                      <span>Material Wizard</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveLeftTab('nesting')}
+                      className={`flex-1 sm:flex-initial py-2 px-5 rounded-full text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                        activeLeftTab === 'nesting'
+                          ? 'neu-btn-active text-blue-700 dark:text-blue-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      <Icon name="dashboard_customize" className="text-lg text-indigo-600 dark:text-indigo-400" />
+                      <span>CV Cutlist + Nesting</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inflow Content Card - Keep both tabs mounted to preserve active session data */}
+                <div className="neu-flat p-5 sm:p-6">
+                  <div className={activeLeftTab === 'wizard' ? 'block' : 'hidden'}>
+                    <MaterialWizard onAddItems={handleAddItems} />
+                  </div>
+                  <div className={activeLeftTab === 'nesting' ? 'block' : 'hidden'}>
+                    <CutlistImporter
+                      onAddItems={handleAddItems}
+                      detectedFiles={detectedFiles}
+                      jobData={jobData}
+                      setJobData={setJobData}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Inflow Content Card - Keep both tabs mounted to preserve active session data */}
-              <div className="neu-flat p-5 sm:p-6">
-                <div className={activeLeftTab === 'wizard' ? 'block' : 'hidden'}>
-                  <MaterialWizard onAddItems={handleAddItems} />
-                </div>
-                <div className={activeLeftTab === 'nesting' ? 'block' : 'hidden'}>
-                  <CutlistImporter
-                    onAddItems={handleAddItems}
-                    detectedFiles={detectedFiles}
-                    jobData={jobData}
-                    setJobData={setJobData}
-                  />
-                </div>
+              {/* ================= RIGHT PANEL: LIVE MTO DOCUMENT & EXPORT (42% ~ 5 cols) ================= */}
+              <div className="lg:col-span-5 h-full">
+                <MtoDocumentPanel
+                  jobData={jobData}
+                  setJobData={setJobData}
+                  showSubstrateTag={showSubstrateTag}
+                  setShowSubstrateTag={setShowSubstrateTag}
+                />
               </div>
-            </div>
-
-            {/* ================= RIGHT PANEL: LIVE MTO DOCUMENT & EXPORT (42% ~ 5 cols) ================= */}
-            <div className="lg:col-span-5 h-full">
-              <MtoDocumentPanel
-                jobData={jobData}
-                setJobData={setJobData}
-                showSubstrateTag={showSubstrateTag}
-                setShowSubstrateTag={setShowSubstrateTag}
-              />
             </div>
           </div>
         </div>
-      </div>
-    </ToastProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

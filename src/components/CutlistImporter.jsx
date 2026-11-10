@@ -15,6 +15,7 @@ import {
   formatThicknessFraction,
 } from '../utils/mtoFormatter';
 import SvgNestModal from './SvgNestModal';
+import LaminateSelectorModal from './LaminateSelectorModal';
 import { useToast } from './Toast';
 
 export default function CutlistImporter({ onAddItems, detectedFiles, jobData, setJobData }) {
@@ -23,6 +24,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
   const [parseResult, setParseResult] = useState(null);
   const [loadedPnc, setLoadedPnc] = useState(null);
   const [expandedGroup, setExpandedGroup] = useState(null);
+  const [laminateModalGroup, setLaminateModalGroup] = useState(null);
 
   // Global Nesting Options
   const [stockSheetSize, setStockSheetSize] = useState('4x8');
@@ -32,6 +34,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
   const [bufferMode, setBufferMode] = useState('area'); // 'area' | 'flat' | 'net'
   const [isRenesting, setIsRenesting] = useState(false);
   const [nestTrigger, setNestTrigger] = useState(0);
+  const [hasPendingRenest, setHasPendingRenest] = useState(false);
 
   // Smartcut.dev API state
   const [showSmartcutConfig, setShowSmartcutConfig] = useState(false);
@@ -52,6 +55,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
     setIsRenesting(true);
     setTimeout(() => {
       setNestTrigger((c) => c + 1);
+      setHasPendingRenest(false);
       setIsRenesting(false);
       const grpCount = parseResult?.materialGroups?.length || 0;
       showToast({
@@ -72,7 +76,10 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
       const updated = { ...prev };
       Object.keys(updated).forEach((mat) => {
         if (updated[mat].category !== 'solid_surface' || newSize === '30x144') {
-          updated[mat] = { ...updated[mat], sheetSize: newSize };
+          const newSubstrate = (newSize === '61x109' && (!updated[mat].substrate || updated[mat].substrate === 'PB'))
+            ? 'MCP'
+            : updated[mat].substrate;
+          updated[mat] = { ...updated[mat], sheetSize: newSize, substrate: newSubstrate };
         }
       });
       return updated;
@@ -93,46 +100,58 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
     });
   };
 
-  // Setup group configs from parsed result
+  // Setup group configs from parsed result, preserving any existing customizations
   const applyParsedResult = (res, pncMeta = null) => {
     setParseResult(res);
     setLoadedPnc(pncMeta);
     setExpandedGroup(null);
+    setHasPendingRenest(false);
+    setNestTrigger((c) => c + 1);
 
     if (res.success && res.materialGroups) {
-      const initialConfigs = {};
-      res.materialGroups.forEach((grp) => {
-        const mat = grp.material;
-        const detectedSub = detectSubstrateFromName(mat);
-        const parsedThickDec = parseThicknessFromName(mat) || grp.thickness;
-        const thickStr = formatThicknessFraction(parsedThickDec);
+      setGroupConfigs((prevConfigs = {}) => {
+        const nextConfigs = {};
+        res.materialGroups.forEach((grp) => {
+          const mat = grp.material;
+          const prev = prevConfigs[mat];
+          const detectedSub = detectSubstrateFromName(mat);
+          const parsedThickDec = parseThicknessFromName(mat) || grp.thickness;
+          const thickStr = formatThicknessFraction(parsedThickDec);
 
-        let initialCategory = 'laid_up_2s';
-        const lowerMat = mat.toLowerCase();
-        if (
-          detectedSub === 'SOLID SURFACE' ||
-          lowerMat.includes('solid surface') ||
-          lowerMat.includes('corian')
-        ) {
-          initialCategory = 'solid_surface';
-        } else if (lowerMat.includes('loose')) {
-          initialCategory = 'loose';
-        } else if (lowerMat.includes('1s')) {
-          initialCategory = 'laid_up_1s';
-        }
+          let initialCategory = prev?.category || 'laid_up_2s';
+          if (!prev?.category) {
+            const lowerMat = mat.toLowerCase();
+            if (
+              detectedSub === 'SOLID SURFACE' ||
+              lowerMat.includes('solid surface') ||
+              lowerMat.includes('corian')
+            ) {
+              initialCategory = 'solid_surface';
+            } else if (lowerMat.includes('loose')) {
+              initialCategory = 'loose';
+            } else if (lowerMat.includes('1s')) {
+              initialCategory = 'laid_up_1s';
+            }
+          }
 
-        // Use sheet size specified in PNC (e.g. 30x144 for solid surface, 4x8 for HPL)
-        const autoSheetSize = grp.defaultSheetSize || stockSheetSize;
+          // Use sheet size specified in PNC or preserve previous user selection
+          const autoSheetSize = prev?.sheetSize || grp.defaultSheetSize || stockSheetSize;
 
-        initialConfigs[mat] = {
-          selected: true,
-          sheetSize: autoSheetSize,
-          category: initialCategory,
-          substrate: detectedSub === 'SOLID SURFACE' ? 'PB' : detectedSub,
-          thickness: thickStr,
-        };
+          nextConfigs[mat] = {
+            selected: prev !== undefined ? prev.selected : true,
+            sheetSize: autoSheetSize,
+            category: initialCategory,
+            substrate: prev?.substrate || (detectedSub === 'SOLID SURFACE' ? 'PB' : detectedSub),
+            thickness: prev?.thickness || thickStr,
+            faceLaminate: prev?.faceLaminate || '',
+            backLaminate: prev?.backLaminate || '',
+            sameOnBothSides: prev?.sameOnBothSides !== undefined ? prev.sameOnBothSides : true,
+            backerType: prev?.backerType || (detectedSub === 'WMCP' || mat.toUpperCase().includes('MCP') ? 'WMCP' : 'Standard Backer'),
+            customOverrideText: prev?.customOverrideText || null,
+          };
+        });
+        return nextConfigs;
       });
-      setGroupConfigs(initialConfigs);
     }
   };
 
@@ -152,20 +171,35 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
 
   // Dimensions lookup for stock sheet sizes
   const getSheetDimensions = (sizeStr) => {
-    switch (sizeStr) {
-      case '5x10':
-        return { width: 60, length: 120 };
-      case '5x12':
-        return { width: 60, length: 144 };
-      case '30x144':
-        return { width: 30, length: 144 };
-      case '4x8':
-      default:
-        return { width: 48, length: 96 };
+    const s = String(sizeStr || '').toLowerCase().replace(/\s+/g, '');
+    if (s.includes('61x109') || (s.includes('61') && s.includes('109'))) {
+      return { width: 61, length: 109 };
     }
+    if (s.includes('5x12')) {
+      return { width: 60, length: 144 };
+    }
+    if (s.includes('5x10')) {
+      return { width: 60, length: 120 };
+    }
+    if (s.includes('30x144') || s.includes('solidsurface')) {
+      return { width: 30, length: 144 };
+    }
+    if (s.includes('36x144')) {
+      return { width: 36, length: 144 };
+    }
+    return { width: 48, length: 96 };
   };
 
-  // Re-calculate nest results for each material group whenever group settings or parts change
+  // Serialize only the sheet sizes per material so UI-only config changes (selection, category, laminates)
+  // do not trigger expensive 2D bin-packing nesting recalculations.
+  const groupSheetSizesKey = useMemo(() => {
+    if (!groupConfigs) return '';
+    return Object.entries(groupConfigs)
+      .map(([mat, cfg]) => `${mat}:${cfg?.sheetSize || ''}`)
+      .join('|');
+  }, [groupConfigs]);
+
+  // Re-calculate nest results for each material group whenever sheet sizes, cutlist parts, or nesting params change
   const groupNestCalculations = useMemo(() => {
     if (!parseResult || !parseResult.materialGroups) return {};
 
@@ -185,7 +219,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
     });
 
     return calculations;
-  }, [parseResult, groupConfigs, stockSheetSize, kerf, edgeTrim, wastePercent, bufferMode, nestTrigger]);
+  }, [nestTrigger, parseResult, groupSheetSizesKey, stockSheetSize, kerf, edgeTrim, wastePercent, bufferMode]);
 
   // Load sample cutlist (CSV)
   const handleLoadSample = () => {
@@ -353,22 +387,55 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
 
   // Update specific group config
   const handleUpdateGroupConfig = (mat, field, value) => {
-    setGroupConfigs((prev) => ({
-      ...prev,
-      [mat]: {
-        ...prev[mat],
+    setGroupConfigs((prev) => {
+      const prevGroup = prev[mat] || {};
+      const updated = {
+        ...prevGroup,
         [field]: value,
-      },
-    }));
+      };
+      if (field === 'sheetSize' && value === '61x109' && (!prevGroup.substrate || prevGroup.substrate === 'PB')) {
+        updated.substrate = 'MCP';
+      }
+      return {
+        ...prev,
+        [mat]: updated,
+      };
+    });
   };
 
-  // Unlock Grain for a part in a material group and re-nest
-  const handleUnlockGrainAndRenest = (part, materialName) => {
+  // Open Laminate Selector Modal for a material group
+  const handleOpenLaminateModal = (mat) => {
+    setLaminateModalGroup(mat);
+  };
+
+  // Save Laminate Configuration from Modal
+  const handleSaveLaminateModal = (updatedData) => {
+    if (!laminateModalGroup) return;
+    setGroupConfigs((prev) => {
+      const prevGroup = prev[laminateModalGroup] || {};
+      return {
+        ...prev,
+        [laminateModalGroup]: {
+          ...prevGroup,
+          ...updatedData,
+        },
+      };
+    });
+    showToast({
+      type: 'success',
+      title: 'Laminate Assigned',
+      message: `Assigned laminate for ${laminateModalGroup}.`,
+    });
+  };
+
+  // Toggle Grain (Lock <-> Unlock) for a part in a material group
+  const handleToggleGrain = (part, materialName) => {
     if (!parseResult) return;
     const targetMat = materialName || previewNest?.material || part?.material;
     const targetPartId = part?.originalPartId || part?.id;
 
-    let unlockedName = '';
+    let partDisplayName = '';
+    let isNowLocked = false;
 
     // Update parseResult parts
     setParseResult((prev) => {
@@ -378,8 +445,12 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
           p.id === targetPartId ||
           (part && p.partName === part.partName && p.assemblyNumber === part.assemblyNumber && p.material === targetMat);
         if (isMatch) {
-          unlockedName = p.partName || p.name;
-          return { ...p, grainLocked: false };
+          partDisplayName = p.partName || p.name;
+          isNowLocked =
+            typeof part?.grainLocked === 'boolean'
+              ? part.grainLocked
+              : !(typeof p.grainLocked === 'boolean' ? p.grainLocked : true);
+          return { ...p, grainLocked: isNowLocked };
         }
         return p;
       });
@@ -391,8 +462,12 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
             p.id === targetPartId ||
             (part && p.partName === part.partName && p.assemblyNumber === part.assemblyNumber);
           if (isMatch) {
-            unlockedName = p.partName || p.name;
-            return { ...p, grainLocked: false };
+            partDisplayName = p.partName || p.name;
+            isNowLocked =
+              typeof part?.grainLocked === 'boolean'
+                ? part.grainLocked
+                : !(typeof p.grainLocked === 'boolean' ? p.grainLocked : true);
+            return { ...p, grainLocked: isNowLocked };
           }
           return p;
         });
@@ -406,15 +481,18 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
       };
     });
 
-    // Bump nestTrigger to re-calculate nest immediately
-    setNestTrigger((c) => c + 1);
+    setHasPendingRenest(true);
 
     showToast({
-      type: 'success',
-      title: 'Grain Unlocked & Re-Nested',
-      message: `${unlockedName || 'Part'} grain direction unlocked for rotation on ${targetMat}.`,
+      type: 'info',
+      title: isNowLocked ? 'Grain Re-Locked' : 'Grain Unlocked',
+      message: isNowLocked
+        ? `${partDisplayName || 'Part'} grain direction locked. Click Re-Nest to recalculate layout.`
+        : `${partDisplayName || 'Part'} grain direction unlocked for rotation. Click Re-Nest to recalculate layout.`,
     });
   };
+
+  const handleUnlockGrainAndRenest = handleToggleGrain;
 
   // Push Selected Groups to Right Panel MTO
   const handlePushSelectedToMto = () => {
@@ -456,11 +534,16 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
         category,
         qty: sheetQty,
         thickness: category === 'loose' ? '' : (cfg.thickness || '3/4"'),
-        materialName: grp.material,
+        materialName: cfg.faceLaminate || grp.material,
+        originalMaterialTag: grp.material,
         substrate,
         sheetSize: targetSize,
         sides,
-        customOverrideText: null,
+        faceLaminate: cfg.faceLaminate || null,
+        backLaminate: cfg.backLaminate || null,
+        sameOnBothSides: cfg.sameOnBothSides !== false,
+        backerType: cfg.backerType || null,
+        customOverrideText: cfg.customOverrideText || null,
       });
     });
 
@@ -665,12 +748,14 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
               className={`neu-btn px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 transition-all ${
                 isRenesting
                   ? 'text-blue-500 cursor-wait bg-blue-50/50 dark:bg-blue-950/40'
-                  : 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
+                  : hasPendingRenest
+                    ? 'text-blue-600 dark:text-blue-400 border border-blue-500/50 bg-blue-500/10 animate-pulse shadow-sm'
+                    : 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
               }`}
               title="Recalculate 2D guillotine nest layouts across all material groups"
             >
               <Icon name="autorenew" className={`text-base ${isRenesting ? 'animate-spin' : ''}`} />
-              <span>{isRenesting ? 'Re-Nesting...' : 'Re-Nest'}</span>
+              <span>{isRenesting ? 'Re-Nesting...' : hasPendingRenest ? 'Re-Nest (Pending)' : 'Re-Nest'}</span>
             </button>
 
             <button
@@ -711,6 +796,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
               <option value="4x8">4x8 (48" × 96")</option>
               <option value="5x10">5x10 (60" × 120")</option>
               <option value="5x12">5x12 (60" × 144")</option>
+              <option value="61x109">61x109 (61" × 109" MCP)</option>
               <option value="30x144">30x144 (Solid Surface)</option>
             </select>
           </div>
@@ -993,21 +1079,60 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
 
                           {/* Material Tag */}
                           <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-2">
                               <button
                                 type="button"
                                 onClick={() => setExpandedGroup(isExpanded ? null : grp.material)}
-                                className="p-1 -ml-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors"
+                                className="p-1 -ml-1 mt-0.5 rounded text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors"
                                 title={isExpanded ? 'Collapse parts' : 'View all parts'}
                                 aria-label={isExpanded ? 'Collapse parts' : 'View all parts'}
                               >
                                 <Icon name={isExpanded ? 'expand_less' : 'expand_more'} className="text-base" />
                               </button>
-                              <div>
-                                <div className="font-bold text-slate-800 dark:text-slate-100">
-                                  {grp.material}
-                                </div>
-                                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                              <div className="min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenLaminateModal(grp.material)}
+                                  className="text-left font-bold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5 group/mat cursor-pointer"
+                                  title="Click to search laminate catalog & assign"
+                                >
+                                  <span className="group-hover/mat:underline">{grp.material}</span>
+                                  <Icon name="palette" className="text-xs text-blue-500 opacity-60 group-hover/mat:opacity-100 transition-opacity" />
+                                </button>
+
+                                {/* Assigned Laminate Badge or Quick Assign Button */}
+                                {cfg.faceLaminate ? (
+                                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenLaminateModal(grp.material)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/70 border border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-[11px] font-bold hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors shadow-sm"
+                                      title="Click to change laminate"
+                                    >
+                                      <Icon name="palette" className="text-xs text-blue-600 dark:text-blue-400" />
+                                      <span className="truncate max-w-[280px]">
+                                        {cfg.faceLaminate}
+                                        {cfg.category === 'laid_up_2s' && !cfg.sameOnBothSides && cfg.backLaminate && cfg.backLaminate !== cfg.faceLaminate
+                                          ? ` / ${cfg.backLaminate}`
+                                          : (cfg.category === 'laid_up_2s' ? ' (2S Same)' : (cfg.backerType ? ` - ${cfg.backerType}` : ''))}
+                                      </span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="mt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenLaminateModal(grp.material)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800/80 hover:bg-blue-100 dark:hover:bg-blue-950/60 border border-slate-300 dark:border-slate-700 hover:border-blue-400 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] font-semibold transition-all"
+                                      title="Click to search catalog & assign laminate"
+                                    >
+                                      <Icon name="palette" className="text-[12px] text-blue-500" />
+                                      <span>Assign Laminate</span>
+                                    </button>
+                                  </div>
+                                )}
+
+                                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                                   Thick: {cfg.thickness || '3/4"'} | Core: {cfg.substrate || 'PB'}
                                   {grp.defaultSheetSize ? ` | PNC Sheet: ${grp.defaultSheetSize}` : ''}
                                 </div>
@@ -1047,6 +1172,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
                               <option value="4x8">4x8 (48" × 96")</option>
                               <option value="5x10">5x10 (60" × 120")</option>
                               <option value="5x12">5x12 (60" × 144")</option>
+                              <option value="61x109">61x109 (61" × 109" MCP)</option>
                               <option value="30x144">30x144 (Solid Surface)</option>
                             </select>
                           </td>
@@ -1220,8 +1346,38 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
         <SvgNestModal
           nestResult={groupNestCalculations[previewNest.material] || previewNest.nest}
           materialName={previewNest.material}
-          onUnlockGrain={handleUnlockGrainAndRenest}
-          onClose={() => setPreviewNest(null)}
+          onToggleGrain={handleToggleGrain}
+          onUnlockGrain={handleToggleGrain}
+          onRenest={handleRenest}
+          isRenesting={isRenesting}
+          hasPendingRenest={hasPendingRenest}
+          onClose={() => {
+            setPreviewNest(null);
+            if (hasPendingRenest) {
+              handleRenest();
+            }
+          }}
+        />
+      )}
+
+      {/* Laminate Selector Modal */}
+      {laminateModalGroup && (
+        <LaminateSelectorModal
+          isOpen={Boolean(laminateModalGroup)}
+          onClose={() => setLaminateModalGroup(null)}
+          initialData={{
+            materialTag: laminateModalGroup,
+            category: groupConfigs[laminateModalGroup]?.category,
+            thickness: groupConfigs[laminateModalGroup]?.thickness,
+            substrate: groupConfigs[laminateModalGroup]?.substrate,
+            sheetSize: groupConfigs[laminateModalGroup]?.sheetSize || stockSheetSize,
+            faceLaminate: groupConfigs[laminateModalGroup]?.faceLaminate,
+            backLaminate: groupConfigs[laminateModalGroup]?.backLaminate,
+            sameOnBothSides: groupConfigs[laminateModalGroup]?.sameOnBothSides,
+            backerType: groupConfigs[laminateModalGroup]?.backerType,
+            customOverrideText: groupConfigs[laminateModalGroup]?.customOverrideText,
+          }}
+          onSave={handleSaveLaminateModal}
         />
       )}
     </div>

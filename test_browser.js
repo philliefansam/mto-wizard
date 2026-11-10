@@ -33,7 +33,10 @@ async function run() {
     errors.push(`PageError: ${err.message}`);
   });
 
-  const fileUrl = 'file:///C:/Users/shanni/Documents/MTO%20Wizard/dist/index.html';
+  const targetDist = fs.existsSync(path.resolve('dist/MTOwizard.html'))
+    ? 'dist/MTOwizard.html'
+    : 'dist/index.html';
+  const fileUrl = `file:///${path.resolve(targetDist).replace(/\\/g, '/')}`;
   console.log('Navigating to:', fileUrl);
   await page.goto(fileUrl, { waitUntil: 'networkidle0' });
 

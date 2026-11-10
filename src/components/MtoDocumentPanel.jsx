@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import Icon from './Icon';
+import LaminateSelectorModal from './LaminateSelectorModal';
 import { useToast } from './Toast';
 import {
   formatMtoDescription,
@@ -18,6 +19,7 @@ export default function MtoDocumentPanel({
   const [emailStatus, setEmailStatus] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const [laminateModalItem, setLaminateModalItem] = useState(null);
 
   const mtoItems = jobData.items || [];
 
@@ -63,6 +65,34 @@ export default function MtoDocumentPanel({
       }),
     }));
     setEditingItemId(null);
+  };
+
+  // Open Laminate Selector Modal for an MTO item
+  const handleOpenLaminateModal = (item) => {
+    setLaminateModalItem(item);
+  };
+
+  // Save Laminate Configuration for MTO item
+  const handleSaveLaminateModal = (updatedData) => {
+    if (!laminateModalItem) return;
+    setJobData((prev) => ({
+      ...prev,
+      items: prev.items.map((it) => {
+        if (it.id === laminateModalItem.id) {
+          return {
+            ...it,
+            ...updatedData,
+            materialName: updatedData.faceLaminate || it.materialName,
+          };
+        }
+        return it;
+      }),
+    }));
+    showToast({
+      type: 'success',
+      title: 'Laminate Updated',
+      message: 'Updated laminate for takeoff line item.',
+    });
   };
 
   // Calculate Purchasing Component Breakdown
@@ -444,7 +474,7 @@ export default function MtoDocumentPanel({
             {/* Engineer & Job # Row */}
             <div className="flex justify-between items-baseline border-b-2 border-slate-400 dark:border-slate-600 pb-1.5 mt-6 text-base sm:text-lg font-geometric">
               <div className="font-normal text-slate-900 dark:text-slate-100">
-                {jobData.engineer || 'Sam H'}
+                {jobData.engineer || '—'}
               </div>
               <div className="font-normal text-slate-900 dark:text-slate-100 font-mono sm:font-geometric">
                 {jobData.jobNumber || '—'}
@@ -537,11 +567,16 @@ export default function MtoDocumentPanel({
                             </div>
                           ) : (
                             <div
-                              onClick={() => handleStartEdit(item)}
-                              className="cursor-pointer group-hover:text-blue-950 dark:group-hover:text-blue-300 transition-colors"
-                              title="Click to edit description"
+                              onClick={() => handleOpenLaminateModal(item)}
+                              className="cursor-pointer group-hover:text-blue-950 dark:group-hover:text-blue-300 transition-colors flex items-center justify-between gap-2 group/desc"
+                              title="Click to search laminate catalog & customize"
                             >
-                              {formatMtoDescription(item, showSubstrateTag)}
+                              <span className="group-hover/desc:underline">
+                                {formatMtoDescription(item, showSubstrateTag)}
+                              </span>
+                              <span className="opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity flex-shrink-0 no-print" title="Laminate Catalog">
+                                <Icon name="palette" className="text-sm" />
+                              </span>
                             </div>
                           )}
                         </td>
@@ -551,9 +586,17 @@ export default function MtoDocumentPanel({
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
                             <button
                               type="button"
+                              onClick={() => handleOpenLaminateModal(item)}
+                              className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 rounded flex items-center"
+                              title="Search laminate catalog & configure"
+                            >
+                              <Icon name="palette" className="text-base" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleStartEdit(item)}
                               className="p-1 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded flex items-center"
-                              title="Edit text"
+                              title="Edit text manually"
                             >
                               <Icon name="edit" className="text-base" />
                             </button>
@@ -777,6 +820,30 @@ export default function MtoDocumentPanel({
           </button>
         )}
       </div>
+
+      {/* Laminate Selector Modal for MTO line items */}
+      {laminateModalItem && (
+        <LaminateSelectorModal
+          isOpen={Boolean(laminateModalItem)}
+          onClose={() => setLaminateModalItem(null)}
+          initialData={{
+            materialTag: laminateModalItem.originalMaterialTag || laminateModalItem.materialName,
+            materialName: laminateModalItem.materialName,
+            category: laminateModalItem.category === 'laid_up'
+              ? (laminateModalItem.sides === '1S' ? 'laid_up_1s' : 'laid_up_2s')
+              : laminateModalItem.category,
+            thickness: laminateModalItem.thickness,
+            substrate: laminateModalItem.substrate,
+            sheetSize: laminateModalItem.sheetSize,
+            faceLaminate: laminateModalItem.faceLaminate || laminateModalItem.materialName,
+            backLaminate: laminateModalItem.backLaminate,
+            sameOnBothSides: laminateModalItem.sameOnBothSides !== false,
+            backerType: laminateModalItem.backerType,
+            customOverrideText: laminateModalItem.customOverrideText,
+          }}
+          onSave={handleSaveLaminateModal}
+        />
+      )}
     </div>
   );
 }

@@ -207,11 +207,13 @@ function detectSheetSizeString(width, length) {
   const l = Math.round(length);
 
   if ((w === 48 || w === 49) && (l === 96 || l === 97)) return '4x8';
+  if ((w === 60 || w === 61) && (l >= 107 && l <= 111)) return '61x109';
   if ((w === 60 || w === 61) && (l === 120 || l === 121)) return '5x10';
   if ((w === 60 || w === 61) && (l === 144 || l === 145)) return '5x12';
   if (w <= 36 && l >= 140) return '30x144';
 
   if (w <= 50 && l <= 100) return '4x8';
+  if (w <= 62 && (l >= 105 && l <= 112)) return '61x109';
   if (w <= 62 && l <= 122) return '5x10';
   return '4x8';
 }

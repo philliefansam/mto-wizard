@@ -222,7 +222,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     size: letter portrait;
     margin: 0.5in;
   }
-  body {
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
   }
@@ -240,5 +244,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     box-shadow: none !important;
     background: #ffffff !important;
     border: none !important;
+  }
+  /* Force clean, high-contrast black ink and borders in print even when operating in Dark Mode */
+  .print-container,
+  .print-container * {
+    color: #000000 !important;
+    background-color: transparent !important;
+    border-color: #333333 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
   }
 }

@@ -1777,13 +1777,13 @@ export function searchWilsonart(query, limit = 12) {
   if (q.length === 0) return [];
 
   // If user only typed 'wilsonart' or 'wilsonart ', return first popular entries
-  if (q === 'wilsonart' || q === 'wilsonart ') {
+  if (q === 'wilsonart' || q === 'wilsonart ' || q === 'wa' || q === 'wa ') {
     return WILSONART_CATALOG.slice(0, limit);
   }
 
-  const strippedQ = q.replace(/^wilsonart\s+/i, '').trim();
+  const strippedQ = q.replace(/^(wilsonart|wa)\s+/i, '').trim();
   const searchQ = strippedQ.length > 0 ? strippedQ : q;
-  const tokens = searchQ.split(/\s+/);
+  const tokens = searchQ.split(/\s+/).filter((t) => t.length > 0 && t !== 'wa');
 
   const matches = WILSONART_CATALOG.filter((item) => {
     const hay = `${item.label} ${item.name} ${item.number}`.toLowerCase();
