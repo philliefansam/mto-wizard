@@ -175,7 +175,7 @@ export default function HardwareModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white dark:bg-[#202124] border border-slate-200 dark:border-[#3c4043] rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-800 dark:text-[#e8eaed] font-sans">
+      <div className="bg-white dark:bg-[#202124] border border-slate-200 dark:border-[#3c4043] rounded-2xl shadow-2xl max-w-2xl sm:max-w-[700px] w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-800 dark:text-[#e8eaed] font-sans">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-[#3c4043] flex items-center justify-between bg-slate-50 dark:bg-[#28292c]">
           <div className="flex items-center gap-2.5">
@@ -202,7 +202,7 @@ export default function HardwareModal({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="p-6 sm:p-7 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
           {errorMsg && (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
               <Icon name="error" className="text-base text-rose-600 shrink-0" />
@@ -211,10 +211,10 @@ export default function HardwareModal({
           )}
 
           {/* Top Row: Empty "+" Image Box & Primary Details */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start">
+          <div className="flex flex-col sm:flex-row gap-5 sm:gap-6 items-start">
             {/* The Blank "+" Image Upload Box */}
             <div className="shrink-0 flex flex-col items-center">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                 Hardware Photo
               </label>
 
@@ -228,7 +228,7 @@ export default function HardwareModal({
                 onClick={() => {
                   if (!image && fileInputRef.current) fileInputRef.current.click();
                 }}
-                className={`w-28 h-28 rounded-xl border-2 border-dashed flex flex-col items-center justify-center relative overflow-hidden transition-all cursor-pointer ${
+                className={`w-36 h-36 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center relative overflow-hidden transition-all cursor-pointer ${
                   isDragging
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 scale-105'
                     : image
@@ -259,7 +259,7 @@ export default function HardwareModal({
                 ) : (
                   <div className="flex flex-col items-center text-center p-2 text-slate-400 dark:text-slate-500">
                     <Icon name="add" className="text-3xl text-slate-400 dark:text-slate-500 mb-1" />
-                    <span className="text-[10px] font-semibold leading-tight">
+                    <span className="text-[11px] font-semibold leading-tight px-2">
                       Drop / Click to Upload
                     </span>
                   </div>
@@ -274,30 +274,30 @@ export default function HardwareModal({
                 className="hidden"
               />
 
-              {/* URL or Toggle Link */}
-              <div className="mt-1.5 text-center">
+              {/* URL or Toggle Link (matches w-36 photo box) */}
+              <div className="mt-2 w-36 text-center">
                 {!showUrlInput ? (
                   <button
                     type="button"
                     onClick={() => setShowUrlInput(true)}
-                    className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                   >
                     {image ? 'Change URL' : 'or enter image URL'}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-1 mt-1 w-28">
+                  <div className="flex items-center gap-1.5 w-36">
                     <input
                       type="url"
                       placeholder="https://..."
                       value={imageUrlInput}
                       onChange={(e) => setImageUrlInput(e.target.value)}
-                      className="w-full text-[10px] p-1 border rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-100 focus:outline-none"
+                      className="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleApplyImageUrl}
-                      className="p-1 text-[10px] bg-blue-600 text-white rounded font-bold"
-                      title="Set URL"
+                      className="px-2.5 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors shrink-0"
+                      title="Apply image URL"
                     >
                       ✓
                     </button>
@@ -307,12 +307,12 @@ export default function HardwareModal({
             </div>
 
             {/* Name & Quantity */}
-            <div className="flex-1 w-full space-y-3">
+            <div className="flex-1 w-full space-y-4">
               {/* Name (Required) */}
               <div>
                 <label
                   htmlFor="hw-name"
-                  className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1"
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
                 >
                   Hardware Name <span className="text-rose-500">*</span>
                 </label>
@@ -326,20 +326,20 @@ export default function HardwareModal({
                     if (errorMsg) setErrorMsg('');
                   }}
                   placeholder="e.g. Blum Clip Top Blumotion 110 Hinges"
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium transition-colors"
                   autoFocus
                 />
               </div>
 
               {/* Quantity (Required) & Pairs Checkbox */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                <div>
-                  <label
-                    htmlFor="hw-qty"
-                    className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1"
-                  >
-                    Quantity <span className="text-rose-500">*</span>
-                  </label>
+              <div>
+                <label
+                  htmlFor="hw-qty"
+                  className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
+                >
+                  Quantity <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <input
                     id="hw-qty"
                     type="number"
@@ -348,12 +348,9 @@ export default function HardwareModal({
                     required
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold font-mono"
+                    className="w-28 sm:w-32 px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold font-mono"
                   />
-                </div>
-
-                <div className="pt-4 sm:pt-5">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <label className="flex items-center gap-2.5 py-2 px-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer select-none transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
                     <input
                       type="checkbox"
                       checked={isPair}
@@ -370,12 +367,12 @@ export default function HardwareModal({
           </div>
 
           {/* Size & Color Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Size (Optional) */}
             <div>
               <label
                 htmlFor="hw-size"
-                className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
               >
                 Size / Specs <span className="text-slate-400 text-[10px] font-normal">(optional)</span>
               </label>
@@ -385,7 +382,7 @@ export default function HardwareModal({
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
                 placeholder="e.g. 22&quot; or 128mm CC or 1/2&quot; Overlay"
-                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors"
               />
             </div>
 
@@ -393,7 +390,7 @@ export default function HardwareModal({
             <div>
               <label
                 htmlFor="hw-color"
-                className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
               >
                 Color / Finish <span className="text-slate-400 text-[10px] font-normal">(optional)</span>
               </label>
@@ -403,7 +400,7 @@ export default function HardwareModal({
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 placeholder="e.g. Matte Black, Satin Nickel, White"
-                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -412,12 +409,12 @@ export default function HardwareModal({
           <div>
             <label
               htmlFor="hw-url"
-              className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5"
             >
               Product / Supplier URL <span className="text-slate-400 text-[10px] font-normal">(optional)</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                 <Icon name="link" className="text-base" />
               </div>
               <input
@@ -426,10 +423,10 @@ export default function HardwareModal({
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://www.hafele.com/... or supplier item link"
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors"
               />
             </div>
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
               Baked as a clickable hyperlink on the readable hardware name in print, PDF, and email exports.
             </p>
           </div>
@@ -442,16 +439,16 @@ export default function HardwareModal({
                 [(QTY)]-[NAME]-[SIZE]-[COLOR]
               </span>
             </div>
-            <div className="p-3 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+            <div className="p-3.5 sm:p-4 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3.5">
               {image ? (
                 <img
                   src={image}
                   alt="Thumbnail"
-                  className="w-10 h-10 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0 shadow-sm"
+                  className="w-11 h-11 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0 shadow-sm"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
-                  <Icon name="image" className="text-lg" />
+                <div className="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
+                  <Icon name="image" className="text-xl" />
                 </div>
               )}
               <div className="min-w-0 flex-1 font-geometric text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate">
