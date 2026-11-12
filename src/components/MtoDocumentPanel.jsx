@@ -360,7 +360,7 @@ export default function MtoDocumentPanel({
 
           return `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-            <td width="70" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 70px; color: #0f172a;">[(${qtyStr})]</td>
+            <td width="80" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 80px; white-space: nowrap; color: #0f172a;">${qtyStr}</td>
             <td align="left" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: left; color: #0f172a; vertical-align: middle;">
               ${imgHtml}
               <span>${nameHtml}${sizeHtml}${colorHtml}</span>
@@ -377,7 +377,7 @@ export default function MtoDocumentPanel({
           <table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 13px; width: 100%; max-width: 650px; border: 1px solid #94a3b8;">
             <thead>
               <tr style="background-color: #f1f5f9;">
-                <th width="70" align="center" style="padding: 8px 12px; border: 1px solid #94a3b8; text-align: center; font-weight: bold; width: 70px; color: #0f172a; background-color: #f1f5f9;">Qty</th>
+                <th width="80" align="center" style="padding: 8px 12px; border: 1px solid #94a3b8; text-align: center; font-weight: bold; width: 80px; white-space: nowrap; color: #0f172a; background-color: #f1f5f9;">Qty</th>
                 <th align="left" style="padding: 8px 12px; border: 1px solid #94a3b8; text-align: left; font-weight: bold; color: #0f172a; background-color: #f1f5f9;">Hardware Item</th>
               </tr>
             </thead>
