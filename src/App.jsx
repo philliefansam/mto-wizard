@@ -35,7 +35,13 @@ export default function App() {
       const sessionSaved = sessionStorage.getItem('mto_job_data');
       if (sessionSaved) {
         const parsed = JSON.parse(sessionSaved);
-        if (parsed && typeof parsed === 'object') return parsed;
+        if (parsed && typeof parsed === 'object') {
+          return {
+            ...parsed,
+            items: Array.isArray(parsed.items) ? parsed.items : [],
+            hardware: Array.isArray(parsed.hardware) ? parsed.hardware : [],
+          };
+        }
       }
     } catch {}
     return {
@@ -44,6 +50,7 @@ export default function App() {
       engineer: getInitialEngineer(),
       date: getTodayFormatted(),
       items: [],
+      hardware: [],
     };
   });
 
@@ -171,6 +178,7 @@ export default function App() {
         engineer: eng,
         date: getTodayFormatted(),
         items: [],
+        hardware: [],
       });
       setLinkedFolder(null);
       setDetectedFiles({ mtoFiles: [], cvExports: [] });

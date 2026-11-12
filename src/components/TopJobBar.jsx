@@ -109,6 +109,7 @@ export default function TopJobBar({
         engineer: res.data.engineer || prev.engineer,
         date: res.data.date || prev.date,
         items: Array.isArray(res.data.items) ? res.data.items : prev.items,
+        hardware: Array.isArray(res.data.hardware) ? res.data.hardware : prev.hardware || [],
       }));
     }
   };
@@ -120,6 +121,7 @@ export default function TopJobBar({
       engineer: SAMPLE_MTO_STATE.engineer,
       date: SAMPLE_MTO_STATE.date,
       items: JSON.parse(JSON.stringify(SAMPLE_MTO_STATE.items)),
+      hardware: SAMPLE_MTO_STATE.hardware ? JSON.parse(JSON.stringify(SAMPLE_MTO_STATE.hardware)) : [],
     });
   };
 

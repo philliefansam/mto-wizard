@@ -248,6 +248,39 @@ export function calculateComponentBreakdown(mtoItems = []) {
 }
 
 /**
+ * Format hardware line description according to standard syntax:
+ * [NAME]-[SIZE (if given)]-[COLOR (if given)]
+ */
+export function formatHardwareDescription(hw) {
+  if (!hw) return '';
+  const name = hw.name ? hw.name.trim() : 'Hardware';
+  const size = hw.size ? hw.size.trim() : '';
+  const color = hw.color ? hw.color.trim() : '';
+
+  const parts = [`[${name}]`];
+  if (size) parts.push(`[${size}]`);
+  if (color) parts.push(`[${color}]`);
+
+  return parts.join('-');
+}
+
+/**
+ * Format hardware full takeoff line:
+ * [(QTY.)]-[NAME]-[SIZE (if given)]-[COLOR (if given)]
+ * Handles pairs or singles, e.g. [(12 PR)]-[Blum 110 Soft-Close Hinges]-[1/2" Overlay]-[Nickel]
+ */
+export function formatHardwareFullLine(hw) {
+  if (!hw) return '';
+  const qty = Number(hw.qty) || 1;
+  const isPair = Boolean(hw.isPair);
+  const qtyStr = isPair ? `${qty} PR` : `${qty}`;
+  const qtyPart = `[(${qtyStr})]`;
+  const descPart = formatHardwareDescription(hw);
+
+  return `${qtyPart}-${descPart}`;
+}
+
+/**
  * Pre-loaded Demo Preset: KOP RD BLD 12
  * Exact historical shop MTO from MTO-KOP RD BLD 12.pdf
  */
@@ -316,6 +349,28 @@ export const SAMPLE_MTO_STATE = {
       sheetSize: '30x144',
       sides: '',
       customOverrideText: null,
+    },
+  ],
+  hardware: [
+    {
+      id: 'demo-hw-1',
+      name: 'Blum Clip Top Blumotion 110 Hinges',
+      url: 'https://www.blum.com',
+      qty: 12,
+      isPair: true,
+      size: '1/2" Overlay',
+      color: 'Nickel',
+      image: '',
+    },
+    {
+      id: 'demo-hw-2',
+      name: 'Hafele Modern Edge Pulls',
+      url: 'https://www.hafele.com',
+      qty: 8,
+      isPair: false,
+      size: '128mm CC',
+      color: 'Matte Black',
+      image: '',
     },
   ],
 };

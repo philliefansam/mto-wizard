@@ -1,10 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import Icon from './Icon';
 import LaminateSelectorModal from './LaminateSelectorModal';
+import HardwareModal from './HardwareModal';
 import { useToast } from './Toast';
 import {
+  generateId,
   formatMtoDescription,
   calculateComponentBreakdown,
+  formatHardwareDescription,
+  formatHardwareFullLine,
 } from '../utils/mtoFormatter';
 
 export default function MtoDocumentPanel({
@@ -21,7 +25,12 @@ export default function MtoDocumentPanel({
   const [editingText, setEditingText] = useState('');
   const [laminateModalItem, setLaminateModalItem] = useState(null);
 
+  // Hardware state
+  const [hardwareModalItem, setHardwareModalItem] = useState(null);
+  const [isHardwareModalOpen, setIsHardwareModalOpen] = useState(false);
+
   const mtoItems = jobData.items || [];
+  const hardwareItems = jobData.hardware || [];
 
   // Update item quantity
   const handleUpdateQty = (itemId, delta) => {
@@ -93,6 +102,68 @@ export default function MtoDocumentPanel({
       title: 'Laminate Updated',
       message: 'Updated laminate for takeoff line item.',
     });
+  };
+
+  // Hardware Handlers
+  const handleOpenAddHardware = () => {
+    setHardwareModalItem(null);
+    setIsHardwareModalOpen(true);
+  };
+
+  const handleOpenEditHardware = (item) => {
+    setHardwareModalItem(item);
+    setIsHardwareModalOpen(true);
+  };
+
+  const handleSaveHardware = (hardwareData) => {
+    setJobData((prev) => {
+      const existing = prev.hardware || [];
+      if (hardwareData.id) {
+        return {
+          ...prev,
+          hardware: existing.map((h) => (h.id === hardwareData.id ? { ...h, ...hardwareData } : h)),
+        };
+      }
+      const newItem = {
+        ...hardwareData,
+        id: generateId(),
+      };
+      return {
+        ...prev,
+        hardware: [...existing, newItem],
+      };
+    });
+
+    showToast({
+      type: 'success',
+      title: hardwareData.id ? 'Hardware Updated' : 'Hardware Added',
+      message: `${hardwareData.name} saved under Additional Job Hardware.`,
+    });
+  };
+
+  const handleDeleteHardware = (hardwareId) => {
+    setJobData((prev) => ({
+      ...prev,
+      hardware: (prev.hardware || []).filter((h) => h.id !== hardwareId),
+    }));
+    showToast({
+      type: 'info',
+      title: 'Hardware Removed',
+      message: 'Hardware line item removed from takeoff.',
+    });
+  };
+
+  const handleUpdateHardwareQty = (hardwareId, delta) => {
+    setJobData((prev) => ({
+      ...prev,
+      hardware: (prev.hardware || []).map((h) => {
+        if (h.id === hardwareId) {
+          const newQty = Math.max(1, (Number(h.qty) || 1) + delta);
+          return { ...h, qty: newQty };
+        }
+        return h;
+      }),
+    }));
   };
 
   // Calculate Purchasing Component Breakdown
@@ -242,6 +313,21 @@ export default function MtoDocumentPanel({
     }
     textLines.push('======================================================================');
 
+    // Hardware Line Items Plain Text
+    if (hardwareItems.length > 0) {
+      textLines.push('');
+      textLines.push('======================================================================');
+      textLines.push('ADDITIONAL JOB HARDWARE');
+      textLines.push('----------------------------------------------------------------------');
+      hardwareItems.forEach((hw) => {
+        textLines.push(formatHardwareFullLine(hw));
+        if (hw.url) {
+          textLines.push(`  URL: ${hw.url}`);
+        }
+      });
+      textLines.push('----------------------------------------------------------------------');
+    }
+
     const plainText = textLines.join('\n');
 
     // 2. Fast, universally compatible Native Outlook / Gmail HTML Table
@@ -256,6 +342,52 @@ export default function MtoDocumentPanel({
         </tr>`
       )
       .join('');
+
+    let hardwareHtml = '';
+    if (hardwareItems.length > 0) {
+      const hwRows = hardwareItems
+        .map((hw, idx) => {
+          const qtyStr = hw.isPair ? `${hw.qty} PR` : `${hw.qty}`;
+          const sizeHtml = hw.size ? `-[${hw.size}]` : '';
+          const colorHtml = hw.color ? `-[${hw.color}]` : '';
+          const nameHtml = hw.url
+            ? `<a href="${hw.url}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: bold;">[${hw.name}]</a>`
+            : `<strong>[${hw.name}]</strong>`;
+
+          const imgHtml = hw.image
+            ? `<img src="${hw.image}" width="32" height="32" style="vertical-align: middle; margin-right: 8px; border-radius: 4px; border: 1px solid #cbd5e1; object-fit: cover;" alt="${hw.name}" />`
+            : '';
+
+          return `
+          <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+            <td width="70" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 70px; color: #0f172a;">[(${qtyStr})]</td>
+            <td align="left" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: left; color: #0f172a; vertical-align: middle;">
+              ${imgHtml}
+              <span>${nameHtml}${sizeHtml}${colorHtml}</span>
+            </td>
+          </tr>`;
+        })
+        .join('');
+
+      hardwareHtml = `
+        <div style="margin-top: 20px;">
+          <div style="font-size: 14px; font-weight: bold; color: #0f172a; text-transform: uppercase; margin-bottom: 6px;">
+            Additional Job Hardware
+          </div>
+          <table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 13px; width: 100%; max-width: 650px; border: 1px solid #94a3b8;">
+            <thead>
+              <tr style="background-color: #f1f5f9;">
+                <th width="70" align="center" style="padding: 8px 12px; border: 1px solid #94a3b8; text-align: center; font-weight: bold; width: 70px; color: #0f172a; background-color: #f1f5f9;">Qty</th>
+                <th align="left" style="padding: 8px 12px; border: 1px solid #94a3b8; text-align: left; font-weight: bold; color: #0f172a; background-color: #f1f5f9;">Hardware Item</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${hwRows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
 
     const htmlContent = `
       <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1e293b; max-width: 650px;">
@@ -317,6 +449,7 @@ export default function MtoDocumentPanel({
             </tr>
           </tfoot>
         </table>
+        ${hardwareHtml}
       </div>
     `;
 
@@ -441,7 +574,7 @@ export default function MtoDocumentPanel({
           </button>
         </div>
 
-        {/* Substrate Tag Toggle */}
+        {/* Substrate Tag Toggle & Add Hardware Button */}
         <div className="flex items-center gap-3">
           <label htmlFor="mto-include-substrate-toggle" className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
             <input
@@ -454,6 +587,16 @@ export default function MtoDocumentPanel({
             />
             <span>Include Substrate in Line Text</span>
           </label>
+
+          <button
+            type="button"
+            onClick={handleOpenAddHardware}
+            className="neu-btn-primary px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow"
+            title="Add hardware line item to takeoff"
+          >
+            <Icon name="construction" className="text-sm text-white" />
+            <span>+ Hardware</span>
+          </button>
         </div>
       </div>
 
@@ -744,6 +887,162 @@ export default function MtoDocumentPanel({
               )}
             </div>
           )}
+
+          {/* ================= ADDITIONAL JOB HARDWARE SECTION ================= */}
+          <section className="mt-8 pt-4 border-t-2 border-slate-400 dark:border-slate-600 font-geometric">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl sm:text-2xl font-normal tracking-wide text-slate-800 dark:text-slate-100 uppercase font-geometric">
+                  Additional Job Hardware
+                </h3>
+                {hardwareItems.length > 0 && (
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 no-print">
+                    {hardwareItems.length} {hardwareItems.length === 1 ? 'item' : 'items'}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenAddHardware}
+                className="no-print neu-btn-primary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
+                title="Add hardware line item"
+              >
+                <Icon name="add" className="text-sm text-white" />
+                <span>+ Hardware</span>
+              </button>
+            </div>
+
+            {hardwareItems.length === 0 ? (
+              <div className="no-print py-5 px-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-center bg-slate-50/50 dark:bg-slate-800/30">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-sans">
+                  No hardware items added yet. Click{' '}
+                  <button
+                    type="button"
+                    onClick={handleOpenAddHardware}
+                    className="font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    + Hardware
+                  </button>{' '}
+                  to add pulls, hinges, slides, or specialty millwork hardware.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-2">
+                <table className="w-full border-collapse font-geometric">
+                  <thead>
+                    <tr className="text-base sm:text-lg font-normal text-slate-900 dark:text-slate-100 border-b border-slate-300 dark:border-slate-700">
+                      <th className="text-left w-24 py-1.5 underline underline-offset-4 font-normal">
+                        Qty
+                      </th>
+                      <th className="text-left py-1.5 underline underline-offset-4 font-normal">
+                        Hardware Description
+                      </th>
+                      <th className="w-16 no-print"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hardwareItems.map((hw) => {
+                      const qtyStr = hw.isPair ? `${hw.qty} PR` : `${hw.qty}`;
+                      return (
+                        <tr
+                          key={hw.id}
+                          className="border-b border-slate-300 dark:border-slate-800 py-3 text-base sm:text-lg hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group"
+                        >
+                          {/* Qty Cell */}
+                          <td className="py-3 font-normal text-slate-900 dark:text-slate-100 align-middle whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-normal tracking-wide">
+                                [({qtyStr})]
+                              </span>
+                              <div className="hidden group-hover:inline-flex items-center gap-0.5 no-print ml-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHardwareQty(hw.id, -1)}
+                                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px]"
+                                  title="Decrease qty"
+                                >
+                                  <Icon name="remove" className="text-xs" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHardwareQty(hw.id, 1)}
+                                  className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 flex items-center justify-center text-[10px]"
+                                  title="Increase qty"
+                                >
+                                  <Icon name="add" className="text-xs" />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Description Cell */}
+                          <td className="py-3 font-normal text-slate-900 dark:text-slate-100 align-middle">
+                            <div className="flex items-center gap-3">
+                              {/* Small Visible Image (if provided) */}
+                              {hw.image && (
+                                <div className="shrink-0">
+                                  <img
+                                    src={hw.image}
+                                    alt={hw.name}
+                                    className="w-9 h-9 sm:w-11 sm:h-11 object-cover rounded-md border border-slate-300 dark:border-slate-600 shadow-sm"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Formatted Text: [(QTY)]-[NAME]-[SIZE]-[COLOR] */}
+                              <div className="font-geometric text-base sm:text-lg flex flex-wrap items-center gap-1">
+                                {hw.url ? (
+                                  <a
+                                    href={hw.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline font-semibold inline-flex items-center gap-1 group/link"
+                                    title={`Open ${hw.name} link: ${hw.url}`}
+                                  >
+                                    <span>[{hw.name}]</span>
+                                    <Icon
+                                      name="open_in_new"
+                                      className="text-xs opacity-0 group-hover/link:opacity-100 transition-opacity no-print"
+                                    />
+                                  </a>
+                                ) : (
+                                  <span>[{hw.name}]</span>
+                                )}
+                                {hw.size && <span>-[{hw.size}]</span>}
+                                {hw.color && <span>-[{hw.color}]</span>}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Actions (no-print) */}
+                          <td className="py-3 text-right no-print align-middle">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditHardware(hw)}
+                                className="p-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 rounded flex items-center"
+                                title="Edit hardware item"
+                              >
+                                <Icon name="edit" className="text-base" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteHardware(hw.id)}
+                                className="p-1 text-rose-400 hover:text-rose-600 rounded flex items-center"
+                                title="Delete hardware item"
+                              >
+                                <Icon name="delete" className="text-base" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </div>
 
         {/* Document Footer */}
@@ -804,12 +1103,12 @@ export default function MtoDocumentPanel({
         </div>
 
         {/* Clear Items Button */}
-        {mtoItems.length > 0 && (
+        {(mtoItems.length > 0 || hardwareItems.length > 0) && (
           <button
             type="button"
             onClick={() => {
-              if (confirm('Clear all takeoff line items?')) {
-                setJobData((prev) => ({ ...prev, items: [] }));
+              if (confirm('Clear all takeoff items and hardware?')) {
+                setJobData((prev) => ({ ...prev, items: [], hardware: [] }));
               }
             }}
             className="neu-icon-btn px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
@@ -842,6 +1141,16 @@ export default function MtoDocumentPanel({
             customOverrideText: laminateModalItem.customOverrideText,
           }}
           onSave={handleSaveLaminateModal}
+        />
+      )}
+
+      {/* Hardware Modal for Adding / Editing Millwork Hardware */}
+      {isHardwareModalOpen && (
+        <HardwareModal
+          isOpen={isHardwareModalOpen}
+          onClose={() => setIsHardwareModalOpen(false)}
+          onSave={handleSaveHardware}
+          initialData={hardwareModalItem}
         />
       )}
     </div>

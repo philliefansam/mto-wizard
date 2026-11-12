@@ -10,6 +10,9 @@ test_screenshots/
 # Development Data
 Development Data/
 
+# Implementation Specs & Notes
+implementations/
+
 # Databases & local history
 *.db
 *.sqlite
