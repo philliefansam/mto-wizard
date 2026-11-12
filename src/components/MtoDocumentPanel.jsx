@@ -545,13 +545,13 @@ export default function MtoDocumentPanel({
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* 1. Top Control Strip (no-print) */}
-      <div className="neu-card-sm p-3 bg-neu-base/70 flex flex-wrap items-center justify-between gap-3 no-print">
-        {/* View Switcher Pills */}
-        <div className="neu-well inline-flex p-1 gap-1">
+      <div className="neu-card-sm p-2.5 sm:p-3 bg-neu-base/70 space-y-2.5 no-print">
+        {/* Row 1: View Switcher (Symmetric 2-column segmented control) */}
+        <div className="neu-well grid grid-cols-2 p-1 gap-1">
           <button
             type="button"
             onClick={() => setActiveView('standard')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`py-1.5 px-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeView === 'standard'
                 ? 'neu-btn-active text-blue-700 dark:text-blue-400'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -563,7 +563,7 @@ export default function MtoDocumentPanel({
           <button
             type="button"
             onClick={() => setActiveView('breakdown')}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`py-1.5 px-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeView === 'breakdown'
                 ? 'neu-btn-active text-blue-700 dark:text-blue-400'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -574,8 +574,8 @@ export default function MtoDocumentPanel({
           </button>
         </div>
 
-        {/* Substrate Tag Toggle & Add Hardware Button */}
-        <div className="flex items-center gap-3">
+        {/* Row 2: Substrate Option + Add Hardware Action */}
+        <div className="flex items-center justify-between gap-3 px-1">
           <label htmlFor="mto-include-substrate-toggle" className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
             <input
               id="mto-include-substrate-toggle"
@@ -591,10 +591,10 @@ export default function MtoDocumentPanel({
           <button
             type="button"
             onClick={handleOpenAddHardware}
-            className="neu-btn-primary px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow"
+            className="neu-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow shrink-0 whitespace-nowrap"
             title="Add hardware line item to takeoff"
           >
-            <Icon name="construction" className="text-sm text-white" />
+            <Icon name="add" className="text-sm text-white" />
             <span>+ Hardware</span>
           </button>
         </div>
@@ -890,21 +890,14 @@ export default function MtoDocumentPanel({
 
           {/* ================= ADDITIONAL JOB HARDWARE SECTION ================= */}
           <section className="mt-8 pt-4 border-t-2 border-slate-400 dark:border-slate-600 font-geometric">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl sm:text-2xl font-normal tracking-wide text-slate-800 dark:text-slate-100 uppercase font-geometric">
-                  Additional Job Hardware
-                </h3>
-                {hardwareItems.length > 0 && (
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 no-print">
-                    {hardwareItems.length} {hardwareItems.length === 1 ? 'item' : 'items'}
-                  </span>
-                )}
-              </div>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h3 className="text-lg sm:text-xl font-normal tracking-wide text-slate-800 dark:text-slate-100 uppercase font-geometric">
+                Additional Job Hardware
+              </h3>
               <button
                 type="button"
                 onClick={handleOpenAddHardware}
-                className="no-print neu-btn-primary px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow"
+                className="no-print neu-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow shrink-0 whitespace-nowrap"
                 title="Add hardware line item"
               >
                 <Icon name="add" className="text-sm text-white" />
