@@ -546,32 +546,34 @@ export default function MtoDocumentPanel({
     <div className="flex flex-col h-full space-y-4">
       {/* 1. Top Control Strip (no-print) */}
       <div className="neu-card-sm p-2.5 sm:p-3 bg-neu-base/70 space-y-2.5 no-print">
-        {/* Row 1: View Switcher (Symmetric 2-column segmented control) */}
-        <div className="neu-well grid grid-cols-2 p-1 gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveView('standard')}
-            className={`py-1.5 px-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeView === 'standard'
-                ? 'neu-btn-active text-blue-700 dark:text-blue-400'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Icon name="description" className="text-base" />
-            <span>Standard MTO Sheet</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('breakdown')}
-            className={`py-1.5 px-2 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeView === 'breakdown'
-                ? 'neu-btn-active text-blue-700 dark:text-blue-400'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Icon name="calculate" className="text-base" />
-            <span>Raw Purchasing Totals</span>
-          </button>
+        {/* Row 1: View Switcher (Centered Segmented Control) */}
+        <div className="flex justify-center">
+          <div className="neu-well inline-flex p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveView('standard')}
+              className={`py-1.5 px-3.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeView === 'standard'
+                  ? 'neu-btn-active text-blue-700 dark:text-blue-400'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="description" className="text-base" />
+              <span>Standard MTO Sheet</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView('breakdown')}
+              className={`py-1.5 px-3.5 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeView === 'breakdown'
+                  ? 'neu-btn-active text-blue-700 dark:text-blue-400'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon name="calculate" className="text-base" />
+              <span>Raw Purchasing Totals</span>
+            </button>
+          </div>
         </div>
 
         {/* Row 2: Substrate Option + Add Hardware Action */}
@@ -594,8 +596,8 @@ export default function MtoDocumentPanel({
             className="neu-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow shrink-0 whitespace-nowrap"
             title="Add hardware line item to takeoff"
           >
-            <Icon name="add" className="text-sm text-white" />
-            <span>+ Hardware</span>
+            <Icon name="construction" className="text-sm text-white" />
+            <span>Add Hardware</span>
           </button>
         </div>
       </div>
@@ -900,8 +902,8 @@ export default function MtoDocumentPanel({
                 className="no-print neu-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow shrink-0 whitespace-nowrap"
                 title="Add hardware line item"
               >
-                <Icon name="add" className="text-sm text-white" />
-                <span>+ Hardware</span>
+                <Icon name="construction" className="text-sm text-white" />
+                <span>Add Hardware</span>
               </button>
             </div>
 
@@ -914,7 +916,7 @@ export default function MtoDocumentPanel({
                     onClick={handleOpenAddHardware}
                     className="font-bold text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    + Hardware
+                    Add Hardware
                   </button>{' '}
                   to add pulls, hinges, slides, or specialty millwork hardware.
                 </p>

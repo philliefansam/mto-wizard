@@ -44,11 +44,11 @@ async function run() {
   console.log('Hardware button found:', hardwareBtnFound);
   if (!hardwareBtnFound) throw new Error('Add Hardware button not found in DOM');
 
-  // 2. Click "+ Hardware" to open modal
-  console.log('2. Clicking "+ Hardware" to open modal...');
+  // 2. Click "Add Hardware" to open modal
+  console.log('2. Clicking "Add Hardware" to open modal...');
   await page.evaluate(() => {
     const btns = Array.from(document.querySelectorAll('button'));
-    const btn = btns.find(b => b.textContent.includes('+ Hardware'));
+    const btn = btns.find(b => b.textContent.includes('Add Hardware'));
     if (btn) btn.click();
   });
 
