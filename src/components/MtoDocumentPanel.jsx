@@ -601,7 +601,7 @@ export default function MtoDocumentPanel({
       </div>
 
       {/* 2. The Live Paper Document (Screen + Print Format) */}
-      <div className="print-container flex-1 bg-white dark:bg-[#28292c] rounded-2xl shadow-xl p-8 sm:p-12 border border-slate-200 dark:border-[#3c4043] text-slate-800 dark:text-[#e8eaed] transition-all min-h-[580px] flex flex-col justify-between">
+      <div className="print-container flex-1 bg-white dark:bg-[#28292c] print:!bg-white print:!text-black print:!shadow-none print:!border-none rounded-2xl shadow-xl p-8 sm:p-12 border border-slate-200 dark:border-[#3c4043] text-slate-800 dark:text-[#e8eaed] transition-all min-h-[580px] flex flex-col justify-between">
         <div>
           {/* Header Section */}
           <header className="text-center font-geometric">
