@@ -75,7 +75,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
     setGroupConfigs((prev) => {
       const updated = { ...prev };
       Object.keys(updated).forEach((mat) => {
-        if (updated[mat].category !== 'solid_surface' || newSize === '30x144') {
+        if (updated[mat].category !== 'solid_surface' || newSize === '30x144' || newSize === '36x144') {
           const newSubstrate = (newSize === '61x109' && (!updated[mat].substrate || updated[mat].substrate === 'PB'))
             ? 'MCP'
             : updated[mat].substrate;
@@ -443,7 +443,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
       const updatedParts = prev.parts.map((p) => {
         const isMatch =
           p.id === targetPartId ||
-          (part && p.partName === part.partName && p.assemblyNumber === part.assemblyNumber && p.material === targetMat);
+          (part?.originalPartId && (p.id === part.originalPartId || p.originalPartId === part.originalPartId));
         if (isMatch) {
           partDisplayName = p.partName || p.name;
           isNowLocked =
@@ -460,7 +460,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
         const groupParts = grp.parts.map((p) => {
           const isMatch =
             p.id === targetPartId ||
-            (part && p.partName === part.partName && p.assemblyNumber === part.assemblyNumber);
+            (part?.originalPartId && (p.id === part.originalPartId || p.originalPartId === part.originalPartId));
           if (isMatch) {
             partDisplayName = p.partName || p.name;
             isNowLocked =
@@ -499,13 +499,18 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
     if (!parseResult || !parseResult.materialGroups) return;
 
     const itemsToAdd = [];
+    const skippedUnplaced = [];
 
     parseResult.materialGroups.forEach((grp) => {
       const cfg = groupConfigs[grp.material];
       if (!cfg || !cfg.selected) return;
 
       const nestRes = groupNestCalculations[grp.material];
-      const sheetQty = nestRes?.bufferedSheets || 1;
+      const sheetQty = nestRes?.bufferedSheets ?? 0;
+      if (sheetQty <= 0) {
+        skippedUnplaced.push(grp.material);
+        return;
+      }
       const targetSize = cfg.sheetSize || grp.defaultSheetSize || stockSheetSize;
 
       let category = 'laid_up';
@@ -550,8 +555,11 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
     if (itemsToAdd.length === 0) {
       showToast({
         type: 'warning',
-        title: 'No Groups Selected',
-        message: 'Please check at least one material group to push to the MTO document.',
+        title: skippedUnplaced.length > 0 ? 'No Placeable Sheets' : 'No Groups Selected',
+        message:
+          skippedUnplaced.length > 0
+            ? `Selected groups (${skippedUnplaced.join(', ')}) have 0 placed sheets—check sheet size or unlock grain before syncing.`
+            : 'Please check at least one material group to push to the MTO document.',
       });
       return;
     }
@@ -761,9 +769,12 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
             <button
               type="button"
               onClick={() => setShowSmartcutConfig(!showSmartcutConfig)}
-              className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-0.5"
+              className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
             >
               <span>Smartcut.dev API</span>
+              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                Coming Soon
+              </span>
               {showSmartcutConfig ? <Icon name="expand_less" className="text-base" /> : <Icon name="expand_more" className="text-base" />}
             </button>
           </div>
@@ -798,6 +809,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
               <option value="5x12">5x12 (60" × 144")</option>
               <option value="61x109">61x109 (61" × 109" MCP)</option>
               <option value="30x144">30x144 (Solid Surface)</option>
+              <option value="36x144">36x144 (Solid Surface)</option>
             </select>
           </div>
 
@@ -936,21 +948,21 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
 
         {/* Smartcut API Configuration Accordion */}
         {showSmartcutConfig && (
-          <div className="mt-2 pt-2 border-t border-slate-300 dark:border-slate-700 space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="smartcut-api-key-input" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                Smartcut.dev API Key (Optional Cloud Optimization):
+          <div className="mt-2 pt-2 border-t border-slate-300 dark:border-slate-700 space-y-2 opacity-75">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <label htmlFor="smartcut-api-key-input" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Smartcut.dev API Key <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">(Coming Soon — currently uses local 2D guillotine nesting)</span>
               </label>
-              <label htmlFor="smartcut-use-toggle" className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+              <label htmlFor="smartcut-use-toggle" className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed">
                 <input
                   id="smartcut-use-toggle"
                   name="useSmartcut"
                   type="checkbox"
-                  checked={useSmartcut}
-                  onChange={(e) => setUseSmartcut(e.target.checked)}
+                  checked={false}
+                  disabled
                   className="rounded text-blue-600"
                 />
-                <span>Enable Cloud Optimization</span>
+                <span>Cloud Optimization (Coming Soon)</span>
               </label>
             </div>
             <div className="flex gap-2">
@@ -958,13 +970,11 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
                 id="smartcut-api-key-input"
                 name="smartcutApiKey"
                 type="password"
-                placeholder="Paste Smartcut.dev API token..."
+                disabled
+                placeholder="Smartcut.dev cloud integration coming soon..."
                 value={smartcutApiKey}
-                onChange={(e) => {
-                  setSmartcutApiKey(e.target.value);
-                  localStorage.setItem('mto_smartcut_api_key', e.target.value);
-                }}
-                className="neu-pressed px-3 py-1.5 text-xs flex-1 text-slate-800 dark:text-slate-100 focus:outline-none"
+                onChange={() => {}}
+                className="neu-pressed px-3 py-1.5 text-xs flex-1 text-slate-500 dark:text-slate-400 focus:outline-none cursor-not-allowed"
               />
             </div>
           </div>
@@ -1046,12 +1056,12 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
                         title="Select All"
                       />
                     </th>
-                    <th className="py-2.5 px-3">Material Tag</th>
-                    <th className="py-2.5 px-2 text-center">Parts</th>
-                    <th className="py-2.5 px-2">Sheet Size</th>
-                    <th className="py-2.5 px-2">Category</th>
-                    <th className="py-2.5 px-2 text-center">Nested Sheets</th>
-                    <th className="py-2.5 px-3 text-center">Visual Nest</th>
+                    <th scope="col" className="py-2.5 px-3">Material Tag</th>
+                    <th scope="col" className="py-2.5 px-2 text-center">Parts</th>
+                    <th scope="col" className="py-2.5 px-2">Sheet Size</th>
+                    <th scope="col" className="py-2.5 px-2">Category</th>
+                    <th scope="col" className="py-2.5 px-2 text-center">Nested Sheets</th>
+                    <th scope="col" className="py-2.5 px-3 text-center">Visual Nest</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-xs">
@@ -1133,7 +1143,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
                                 )}
 
                                 <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                  Thick: {cfg.thickness || '3/4"'} | Core: {cfg.substrate || 'PB'}
+                                  Thick: {cfg.thickness || '3/4"'} | {cfg.category === 'solid_surface' ? 'Solid Surface' : `Core: ${cfg.substrate || 'PB'}`}
                                   {grp.defaultSheetSize ? ` | PNC Sheet: ${grp.defaultSheetSize}` : ''}
                                 </div>
                               </div>
@@ -1174,6 +1184,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
                               <option value="5x12">5x12 (60" × 144")</option>
                               <option value="61x109">61x109 (61" × 109" MCP)</option>
                               <option value="30x144">30x144 (Solid Surface)</option>
+                              <option value="36x144">36x144 (Solid Surface)</option>
                             </select>
                           </td>
 
@@ -1346,6 +1357,7 @@ export default function CutlistImporter({ onAddItems, detectedFiles, jobData, se
         <SvgNestModal
           nestResult={groupNestCalculations[previewNest.material] || previewNest.nest}
           materialName={previewNest.material}
+          wasteBufferPercent={wastePercent}
           onToggleGrain={handleToggleGrain}
           onUnlockGrain={handleToggleGrain}
           onRenest={handleRenest}

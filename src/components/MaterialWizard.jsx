@@ -93,7 +93,7 @@ export default function MaterialWizard({ onAddItems }) {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlightedIndex((prev) => (prev <= 0 ? allSuggestions.length - 1 : prev - 1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
       e.preventDefault();
       const targetIdx = highlightedIndex >= 0 ? highlightedIndex : 0;
       if (allSuggestions[targetIdx]) {
@@ -695,7 +695,7 @@ export default function MaterialWizard({ onAddItems }) {
                               <input
                                 id={`matrix-qty-${row.key}-${sub.toLowerCase()}`}
                                 name={`matrix_qty_${row.key}_${sub.toLowerCase()}`}
-                                aria-label={`${row.size} ${sub} Quantity`}
+                                aria-label={`${row.label} ${sub} Quantity`}
                                 type="text"
                                 inputMode="numeric"
                                 value={matrixData[row.key][sub]}

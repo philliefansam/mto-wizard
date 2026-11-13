@@ -27,6 +27,8 @@ export function ToastProvider({ children }) {
 
       {/* Floating Toast Container */}
       <div
+        role="region"
+        aria-label="Notifications"
         className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none p-3 sm:p-0 no-print"
         aria-live="polite"
       >

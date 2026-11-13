@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --bg-neu: #e0e5ec;
   --shadow-dark: #bec3c9;
   --shadow-light: #ffffff;
@@ -19,6 +20,7 @@
 /* Google Material 3 (M3) Dark Theme: Neutral Dark Grey (#202124), NOT Pitch Black */
 html.dark,
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-neu: #202124;
   --shadow-dark: #17181a;
   --shadow-light: #2b2d31;
@@ -214,6 +216,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .animate-slide-up {
   animation: slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Keyboard Focus Accessibility */
+:where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--neu-accent);
+  outline-offset: 2px;
+}
+
+/* Coarse Pointer (Tablet / Touchscreen) Target Ergonomics */
+@media (pointer: coarse) {
+  .neu-btn,
+  .neu-icon-btn,
+  .neu-btn-primary {
+    min-height: 44px;
+  }
 }
 
 /* Print Stylesheet: Hides Builder UI, Formats Right Panel as Exact Shop MTO Document */

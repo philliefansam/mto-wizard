@@ -93,7 +93,7 @@ function LaminateSearchInput({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlightedIndex((prev) => (prev <= 0 ? allSuggestions.length - 1 : prev - 1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
       e.preventDefault();
       const target = highlightedIndex >= 0 ? allSuggestions[highlightedIndex] : allSuggestions[0];
       if (target) {
@@ -254,7 +254,48 @@ export default function LaminateSelectorModal({
   initialData = {},
   onSave,
 }) {
-  if (!isOpen) return null;
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="laminate-modal-title"
+      onCancel={(e) => {
+        if (e.target !== dialogRef.current) return;
+        e.preventDefault();
+        onClose();
+      }}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) onClose();
+      }}
+      className="m-auto p-0 bg-transparent border-0 max-w-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] backdrop:bg-black/70 backdrop:backdrop-blur-sm no-print"
+    >
+      {isOpen && (
+        <LaminateSelectorModalContent
+          onClose={onClose}
+          initialData={initialData}
+          onSave={onSave}
+        />
+      )}
+    </dialog>
+  );
+}
+
+function LaminateSelectorModalContent({
+  onClose,
+  initialData = {},
+  onSave,
+}) {
 
   const rawTag = initialData.materialTag || initialData.materialName || 'Material';
   const autoCaliper = extractCaliperTag(rawTag);
@@ -389,8 +430,7 @@ export default function LaminateSelectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in no-print">
-      <div className="bg-[#f0f4f9] dark:bg-[#1e1f20] rounded-2xl p-4 sm:p-6 max-w-2xl w-full border border-slate-300 dark:border-slate-700 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
+    <div className="bg-[#f0f4f9] dark:bg-[#1e1f20] rounded-2xl p-4 sm:p-6 max-w-2xl w-full border border-slate-300 dark:border-slate-700 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-300 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -398,7 +438,7 @@ export default function LaminateSelectorModal({
               <Icon name="palette" className="text-xl text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 font-geometric truncate">
+              <h3 id="laminate-modal-title" className="text-base font-bold text-slate-800 dark:text-slate-100 font-geometric truncate">
                 Assign Laminate to Material
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
@@ -713,6 +753,5 @@ export default function LaminateSelectorModal({
           </div>
         </div>
       </div>
-    </div>
   );
 }

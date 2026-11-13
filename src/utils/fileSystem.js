@@ -32,37 +32,7 @@ export async function getSystemUsername() {
     } catch {}
   }
 
-  // 2. Companion server check (Pull Sheet Wizard server on port 9994 or current origin)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
-    const res = await fetch('http://localhost:9994/api/status', {
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.username) return formatUsernameAsEngineer(data.username);
-    }
-  } catch {}
-
-  // 3. Current origin /api/status if hosted
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
-    const res = await fetch('/api/status', {
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.username) return formatUsernameAsEngineer(data.username);
-    }
-  } catch {}
-
-  // 4. Injected compile-time PC Username from host machine
+  // 2. Injected compile-time PC Username from host machine
   if (typeof __PC_USERNAME__ !== 'undefined' && __PC_USERNAME__) {
     return formatUsernameAsEngineer(__PC_USERNAME__);
   }

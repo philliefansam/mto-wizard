@@ -95,24 +95,30 @@ export function parseCabinetVisionExport(rawText, defaultUnit = 'in') {
     return fields;
   };
 
-  const headers = parseLine(firstLine).map((h) => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const rawHeaders = parseLine(firstLine).map((h) => h.toLowerCase().trim());
+  const headers = rawHeaders.map((h) => h.replace(/[^a-z0-9]/g, ''));
 
   // Header field finder - require exact match for short abbreviations (e.g. 'l', 'w')
-  const findIndex = (patterns) => {
-    return headers.findIndex((h) =>
-      patterns.some((p) => (p.length <= 2 ? h === p : h.includes(p)))
-    );
+  const findIndex = (patterns, excludeIdx = -1) => {
+    return headers.findIndex((h, idx) => {
+      if (idx === excludeIdx) return false;
+      const raw = rawHeaders[idx];
+      return patterns.some((p) => {
+        if (p.includes('#')) return raw === p || raw.replace(/\s+/g, '') === p;
+        return p.length <= 2 ? h === p : h.includes(p);
+      });
+    });
   };
 
   const nameIdx = findIndex(['partname', 'part', 'description', 'label', 'piecename']);
-  const matIdx = findIndex(['material', 'mat', 'code', 'matname']);
+  const matIdx = findIndex(['material', 'mat', 'matname', 'matcode', 'materialcode', 'code']);
   const lenIdx = findIndex(['length', 'len', 'height', 'cutlength', 'l']);
   const widIdx = findIndex(['width', 'wid', 'cutwidth', 'w']);
   const qtyIdx = findIndex(['qty', 'quantity', 'count', 'piececount']);
   const grainIdx = findIndex(['grain', 'rotation', 'rotate', 'graindirection']);
   const asmIdx = findIndex(['cabinet', 'assembly', 'cabname', 'cab']);
-  const asmNumIdx = findIndex(['cab#', 'cabno', 'cabnum', 'assembly#', 'cabinet#']);
-  const internalIdx = findIndex(['internalname', 'parttype', 'type', 'internal', 'code']);
+  const asmNumIdx = findIndex(['cab#', 'cabno', 'cabnum', 'assembly#', 'cabinet#'], asmIdx);
+  const internalIdx = findIndex(['internalname', 'parttype', 'type', 'internal', 'partcode', 'code'], matIdx);
 
   const parts = [];
   const errors = [];

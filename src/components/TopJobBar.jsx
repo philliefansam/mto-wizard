@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Icon from './Icon';
+import ConfirmDialog from './ConfirmDialog';
 import {
   linkJobDirectory,
   saveMtoJson,
@@ -21,6 +22,7 @@ export default function TopJobBar({
   effectiveTheme,
 }) {
   const [saveStatus, setSaveStatus] = useState(null);
+  const [pendingLoadData, setPendingLoadData] = useState(null);
   const dateInputRef = useRef(null);
 
   // Cycle through: System Auto -> Dark -> Light -> System Auto
@@ -99,18 +101,26 @@ export default function TopJobBar({
     }
   };
 
+  const applyLoadedJson = (data) => {
+    setJobData({
+      jobName: data.jobName ?? '',
+      jobNumber: data.jobNumber ?? '',
+      engineer: data.engineer ?? '',
+      date: data.date ?? '',
+      items: Array.isArray(data.items) ? data.items : [],
+      hardware: Array.isArray(data.hardware) ? data.hardware : [],
+    });
+  };
+
   const handleLoadJson = async () => {
     const res = await promptOpenMtoJsonFile();
     if (res.success && res.data) {
-      setJobData((prev) => ({
-        ...prev,
-        jobName: res.data.jobName || prev.jobName,
-        jobNumber: res.data.jobNumber || prev.jobNumber,
-        engineer: res.data.engineer || prev.engineer,
-        date: res.data.date || prev.date,
-        items: Array.isArray(res.data.items) ? res.data.items : prev.items,
-        hardware: Array.isArray(res.data.hardware) ? res.data.hardware : prev.hardware || [],
-      }));
+      const hasExisting = (jobData.items?.length || 0) > 0 || (jobData.hardware?.length || 0) > 0;
+      if (hasExisting) {
+        setPendingLoadData(res.data);
+      } else {
+        applyLoadedJson(res.data);
+      }
     }
   };
 
@@ -192,7 +202,7 @@ export default function TopJobBar({
               type="text"
               value={jobData.engineer}
               onChange={(e) => setJobData({ ...jobData, engineer: e.target.value })}
-              placeholder="Sam H"
+              placeholder="Engineer / Estimator"
               className="w-full bg-transparent text-sm font-semibold text-slate-700 dark:text-slate-100 focus:outline-none truncate"
             />
           </div>
@@ -334,6 +344,18 @@ export default function TopJobBar({
           <Icon name="restart_alt" className="text-rose-600 dark:text-rose-400 text-lg" />
         </button>
       </div>
+      <ConfirmDialog
+        isOpen={Boolean(pendingLoadData)}
+        title="Replace Current Takeoff?"
+        message="Loading this MTO JSON file will replace your current job metadata, materials, and hardware items."
+        confirmLabel="Replace & Load"
+        variant="primary"
+        onConfirm={() => {
+          if (pendingLoadData) applyLoadedJson(pendingLoadData);
+          setPendingLoadData(null);
+        }}
+        onCancel={() => setPendingLoadData(null)}
+      />
     </header>
   );
 }

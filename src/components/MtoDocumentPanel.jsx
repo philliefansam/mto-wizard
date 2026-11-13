@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Icon from './Icon';
 import LaminateSelectorModal from './LaminateSelectorModal';
 import HardwareModal from './HardwareModal';
+import ConfirmDialog from './ConfirmDialog';
 import { useToast } from './Toast';
 import {
   generateId,
@@ -23,6 +24,7 @@ export default function MtoDocumentPanel({
   const [emailStatus, setEmailStatus] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [laminateModalItem, setLaminateModalItem] = useState(null);
 
   // Hardware state
@@ -241,8 +243,30 @@ export default function MtoDocumentPanel({
 
     const jobName = jobData.jobName || 'UNTITLED PROJECT';
     const jobNum = jobData.jobNumber || '—';
-    const engineer = jobData.engineer || 'Sam H';
+    const engineer = jobData.engineer || '—';
     const date = jobData.date || '';
+
+    const escapeHtml = (val) =>
+      String(val ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const sanitizeUrl = (val, allowDataImage = false) => {
+      if (!val) return '';
+      const trimmed = String(val).trim();
+      if (allowDataImage && /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)) {
+        return trimmed;
+      }
+      try {
+        const parsed = new URL(trimmed);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+      } catch {
+        return '';
+      }
+    };
 
     // 1. Universally compatible Plain Text: Works on 100% of devices (iOS, Android, Windows, Mac, webmail)
     // Uses clear box borders and aligned column spacing + tabs so it never collapses into unreadable text
@@ -337,8 +361,8 @@ export default function MtoDocumentPanel({
       .map(
         (r, idx) => `
         <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-          <td width="70" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 70px; color: #0f172a;">${r.qty}</td>
-          <td align="left" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: left; color: #0f172a;">${r.desc}</td>
+          <td width="70" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 70px; color: #0f172a;">${escapeHtml(r.qty)}</td>
+          <td align="left" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: left; color: #0f172a;">${escapeHtml(r.desc)}</td>
         </tr>`
       )
       .join('');
@@ -348,19 +372,21 @@ export default function MtoDocumentPanel({
       const hwRows = hardwareItems
         .map((hw, idx) => {
           const qtyStr = hw.isPair ? `${hw.qty} PR` : `${hw.qty}`;
-          const sizeHtml = hw.size ? `-[${hw.size}]` : '';
-          const colorHtml = hw.color ? `-[${hw.color}]` : '';
-          const nameHtml = hw.url
-            ? `<a href="${hw.url}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: bold;">[${hw.name}]</a>`
-            : `<strong>[${hw.name}]</strong>`;
+          const sizeHtml = hw.size ? `-[${escapeHtml(hw.size)}]` : '';
+          const colorHtml = hw.color ? `-[${escapeHtml(hw.color)}]` : '';
+          const safeHref = sanitizeUrl(hw.url, false);
+          const safeImgSrc = sanitizeUrl(hw.image, true);
+          const nameHtml = safeHref
+            ? `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: bold;">[${escapeHtml(hw.name)}]</a>`
+            : `<strong>[${escapeHtml(hw.name)}]</strong>`;
 
-          const imgHtml = hw.image
-            ? `<img src="${hw.image}" width="32" height="32" style="vertical-align: middle; margin-right: 8px; border-radius: 4px; border: 1px solid #cbd5e1; object-fit: cover;" alt="${hw.name}" />`
+          const imgHtml = safeImgSrc
+            ? `<img src="${escapeHtml(safeImgSrc)}" width="32" height="32" style="vertical-align: middle; margin-right: 8px; border-radius: 4px; border: 1px solid #cbd5e1; object-fit: contain; background-color: #ffffff;" alt="${escapeHtml(hw.name)}" />`
             : '';
 
           return `
           <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-            <td width="80" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 80px; white-space: nowrap; color: #0f172a;">${qtyStr}</td>
+            <td width="80" align="center" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; width: 80px; white-space: nowrap; color: #0f172a;">${escapeHtml(qtyStr)}</td>
             <td align="left" style="padding: 7px 12px; border: 1px solid #cbd5e1; text-align: left; color: #0f172a; vertical-align: middle;">
               ${imgHtml}
               <span>${nameHtml}${sizeHtml}${colorHtml}</span>
@@ -392,9 +418,9 @@ export default function MtoDocumentPanel({
     const htmlContent = `
       <div style="font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1e293b; max-width: 650px;">
         <div style="margin-bottom: 10px;">
-          <div style="font-size: 16px; font-weight: bold; color: #0f172a; text-transform: uppercase;">Material Takeoff: ${jobName}</div>
+          <div style="font-size: 16px; font-weight: bold; color: #0f172a; text-transform: uppercase;">Material Takeoff: ${escapeHtml(jobName)}</div>
           <div style="font-size: 12px; color: #475569; margin-top: 2px;">
-            <strong>Job #:</strong> ${jobNum} &nbsp;|&nbsp; <strong>Engineer:</strong> ${engineer} &nbsp;|&nbsp; <strong>Date:</strong> ${date}
+            <strong>Job #:</strong> ${escapeHtml(jobNum)} &nbsp;|&nbsp; <strong>Engineer:</strong> ${escapeHtml(engineer)} &nbsp;|&nbsp; <strong>Date:</strong> ${escapeHtml(date)}
           </div>
         </div>
         <table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 13px; width: 100%; max-width: 650px; border: 1px solid #94a3b8;">
@@ -634,7 +660,7 @@ export default function MtoDocumentPanel({
                 </thead>
                 <tbody>
                   {mtoItems.length === 0 ? (
-                    <tr>
+                    <tr className="no-print">
                       <td
                         colSpan={3}
                         className="py-12 text-center text-slate-400 italic text-base font-sans"
@@ -652,7 +678,7 @@ export default function MtoDocumentPanel({
                         <td className="py-3 font-normal text-slate-900 dark:text-slate-100 align-top whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <span className="font-normal tracking-wide">({item.qty})</span>
-                            <div className="hidden group-hover:inline-flex items-center gap-0.5 no-print ml-1">
+                            <div className="inline-flex sm:hidden sm:group-hover:inline-flex sm:group-focus-within:inline-flex items-center gap-0.5 no-print ml-1">
                               <button
                                 type="button"
                                 onClick={() => handleUpdateQty(item.id, -1)}
@@ -685,7 +711,7 @@ export default function MtoDocumentPanel({
                                 value={editingText}
                                 onChange={(e) => setEditingText(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveEdit(item.id);
+                                  if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) handleSaveEdit(item.id);
                                   if (e.key === 'Escape') setEditingItemId(null);
                                 }}
                                 className="border border-blue-400 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded px-2 py-1 text-base w-full focus:outline-none"
@@ -718,7 +744,7 @@ export default function MtoDocumentPanel({
 
                         {/* Row Actions (no-print) */}
                         <td className="py-3 text-right no-print align-top">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
+                          <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => handleOpenLaminateModal(item)}
@@ -937,9 +963,9 @@ export default function MtoDocumentPanel({
                           <td className="py-3 font-normal text-slate-900 dark:text-slate-100 align-middle whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
                               <span className="font-normal tracking-wide">
-                                [({qtyStr})]
+                                ({qtyStr})
                               </span>
-                              <div className="hidden group-hover:inline-flex items-center gap-0.5 no-print ml-1">
+                              <div className="inline-flex sm:hidden sm:group-hover:inline-flex sm:group-focus-within:inline-flex items-center gap-0.5 no-print ml-1">
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateHardwareQty(hw.id, -1)}
@@ -965,30 +991,37 @@ export default function MtoDocumentPanel({
                             <div className="flex items-center gap-3">
                               {/* Small Visible Image (if provided) */}
                               {hw.image && (
-                                <div className="shrink-0">
+                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-md border border-slate-300 dark:border-slate-600 bg-white overflow-hidden shadow-sm flex items-center justify-center shrink-0">
                                   <img
                                     src={hw.image}
                                     alt={hw.name}
-                                    className="w-9 h-9 sm:w-11 sm:h-11 object-cover rounded-md border border-slate-300 dark:border-slate-600 shadow-sm"
+                                    onError={(e) => {
+                                      if (e.currentTarget.parentElement) {
+                                        e.currentTarget.parentElement.style.display = 'none';
+                                      }
+                                    }}
+                                    className="w-full h-full object-contain p-0.5"
+                                    style={{
+                                      transform:
+                                        hw.imageZoom && Number(hw.imageZoom) !== 1
+                                          ? `scale(${Number(hw.imageZoom)})`
+                                          : undefined,
+                                    }}
                                   />
                                 </div>
                               )}
 
                               {/* Formatted Text: [(QTY)]-[NAME]-[SIZE]-[COLOR] */}
-                              <div className="font-geometric text-base sm:text-lg flex flex-wrap items-center gap-1">
-                                {hw.url ? (
+                              <div className="font-geometric text-base sm:text-lg leading-snug">
+                                {hw.url && /^https?:\/\//i.test(hw.url.trim()) ? (
                                   <a
-                                    href={hw.url}
+                                    href={hw.url.trim()}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 hover:underline font-semibold inline-flex items-center gap-1 group/link"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                                     title={`Open ${hw.name} link: ${hw.url}`}
                                   >
-                                    <span>[{hw.name}]</span>
-                                    <Icon
-                                      name="open_in_new"
-                                      className="text-xs opacity-0 group-hover/link:opacity-100 transition-opacity no-print"
-                                    />
+                                    [{hw.name}]
                                   </a>
                                 ) : (
                                   <span>[{hw.name}]</span>
@@ -1001,7 +1034,7 @@ export default function MtoDocumentPanel({
 
                           {/* Actions (no-print) */}
                           <td className="py-3 text-right no-print align-middle">
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
+                            <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity flex items-center justify-end gap-1">
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditHardware(hw)}
@@ -1091,11 +1124,7 @@ export default function MtoDocumentPanel({
         {(mtoItems.length > 0 || hardwareItems.length > 0) && (
           <button
             type="button"
-            onClick={() => {
-              if (confirm('Clear all takeoff items and hardware?')) {
-                setJobData((prev) => ({ ...prev, items: [], hardware: [] }));
-              }
-            }}
+            onClick={() => setShowClearConfirm(true)}
             className="neu-icon-btn px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
             title="Clear all rows from takeoff table"
           >
@@ -1104,6 +1133,19 @@ export default function MtoDocumentPanel({
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        title="Clear Takeoff Table?"
+        message="This will remove all material takeoff lines and hardware items from the current document."
+        confirmLabel="Clear Table"
+        variant="danger"
+        onConfirm={() => {
+          setJobData((prev) => ({ ...prev, items: [], hardware: [] }));
+          setShowClearConfirm(false);
+        }}
+        onCancel={() => setShowClearConfirm(false)}
+      />
 
       {/* Laminate Selector Modal for MTO line items */}
       {laminateModalItem && (

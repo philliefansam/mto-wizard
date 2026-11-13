@@ -17,25 +17,31 @@ export function generateId() {
 export function parseThicknessFromName(name) {
   if (!name) return 0.75;
   const cleanName = String(name).trim();
+  const validDens = new Set([2, 4, 8, 16, 32, 64]);
 
-  const matchWholeFrac = cleanName.match(/^(\d+)[\s-]+(\d+)[-/](\d+)(?![a-zA-Z])/);
+  const matchWholeFrac = cleanName.match(/(?:^|\s)(\d+)[\s-]+(\d+)[-/](\d+)(?![a-zA-Z0-9-])/);
   if (matchWholeFrac) {
     const whole = parseFloat(matchWholeFrac[1]);
     const num = parseFloat(matchWholeFrac[2]);
     const den = parseFloat(matchWholeFrac[3]);
-    if (den !== 0) return parseFloat((whole + num / den).toFixed(4));
+    if (den !== 0 && validDens.has(den) && whole <= 4) {
+      return parseFloat((whole + num / den).toFixed(4));
+    }
   }
 
-  const matchFrac = cleanName.match(/^(\d+)[-/](\d+)(?![a-zA-Z])/);
+  const matchFrac = cleanName.match(/(?:^|\s)(\d+)[-/](\d+)(?![a-zA-Z0-9-])/);
   if (matchFrac) {
     const num = parseFloat(matchFrac[1]);
     const den = parseFloat(matchFrac[2]);
-    if (den !== 0) return parseFloat((num / den).toFixed(4));
+    if (den !== 0 && validDens.has(den) && num / den <= 4) {
+      return parseFloat((num / den).toFixed(4));
+    }
   }
 
-  const matchDec = cleanName.match(/^(\d+\.\d+)/);
+  const matchDec = cleanName.match(/(?:^|\s)(\d+\.\d+)(?![a-zA-Z0-9])/);
   if (matchDec) {
-    return parseFloat(matchDec[1]);
+    const dec = parseFloat(matchDec[1]);
+    if (dec > 0 && dec <= 4) return dec;
   }
 
   return 0.75;
@@ -69,7 +75,7 @@ export function detectSubstrateFromName(name = '') {
   if (u.includes('MCP') || u.includes('MELAMINE')) return 'MCP';
   if (u.includes('MDF')) return 'MDF';
   if (u.includes('PLY') || u.includes('WOOD') || u.includes('MAPLE') || u.includes('OAK') || u.includes('BIRCH')) return 'PLY';
-  if (u.includes('CORIAN') || u.includes('SOLID SURFACE') || /\bSS\b/.test(u)) return 'SOLID SURFACE';
+  if (u.includes('CORIAN') || u.includes('SOLID SURFACE') || u.includes('HI-MACS') || u.includes('STARON') || u.includes('12MM') || /\bSS\b/.test(u)) return 'SS';
   if (u.includes('PB') || u.includes('PARTICLE')) return 'PB';
   return 'PB';
 }
@@ -274,7 +280,7 @@ export function formatHardwareFullLine(hw) {
   const qty = Number(hw.qty) || 1;
   const isPair = Boolean(hw.isPair);
   const qtyStr = isPair ? `${qty} PR` : `${qty}`;
-  const qtyPart = `[(${qtyStr})]`;
+  const qtyPart = `(${qtyStr})`;
   const descPart = formatHardwareDescription(hw);
 
   return `${qtyPart}-${descPart}`;

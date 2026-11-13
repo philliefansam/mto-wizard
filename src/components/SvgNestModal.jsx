@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Icon from './Icon';
 
 // Standard Cabinet Vision part identifier resolver
@@ -142,6 +142,7 @@ function renderPartLabel(part, isHovered) {
 export default function SvgNestModal({
   nestResult,
   materialName,
+  wasteBufferPercent = 10,
   onToggleGrain,
   onUnlockGrain,
   onRenest,
@@ -151,8 +152,20 @@ export default function SvgNestModal({
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = useState(0);
   const [hoveredPart, setHoveredPart] = useState(null);
+  const [selectedPart, setSelectedPart] = useState(null);
   const [localGrainLocks, setLocalGrainLocks] = useState({});
   const [hasChanges, setHasChanges] = useState(hasPendingRenest);
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (nestResult && !dialog.open) {
+      dialog.showModal();
+    } else if (!nestResult && dialog.open) {
+      dialog.close();
+    }
+  }, [nestResult]);
 
   // Sync external pending renest flag
   useEffect(() => {
@@ -251,8 +264,22 @@ export default function SvgNestModal({
     setHasChanges(false);
   };
 
+  const inspectedPart = hoveredPart || selectedPart;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#202124]/75 backdrop-blur-sm animate-fade-in no-print">
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="svg-nest-modal-title"
+      onCancel={(e) => {
+        if (e.target !== dialogRef.current) return;
+        e.preventDefault();
+        onClose();
+      }}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) onClose();
+      }}
+      className="m-auto p-0 bg-transparent border-0 max-w-5xl w-[calc(100%-2rem)] backdrop:bg-[#202124]/75 backdrop:backdrop-blur-sm no-print"
+    >
       <div className="bg-[#e0e5ec] dark:bg-[#202124] rounded-2xl p-5 max-w-5xl w-full neu-flat border border-slate-300/60 dark:border-[#3c4043] shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-300 dark:border-[#3c4043]">
@@ -261,7 +288,7 @@ export default function SvgNestModal({
               <Icon name="layers" className="text-xl text-white" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 font-geometric">
+              <h3 id="svg-nest-modal-title" className="text-base font-bold text-slate-800 dark:text-slate-100 font-geometric">
                 SVG Nest Preview: {materialName}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 flex-wrap">
@@ -373,62 +400,64 @@ export default function SvgNestModal({
 
         {/* Interactive Part Inspector HUD Banner */}
         <div className="mb-2.5 p-2.5 rounded-xl bg-slate-100/90 dark:bg-[#1a1b1e] border border-slate-300/60 dark:border-[#3c4043] flex flex-wrap items-center justify-between gap-3 text-xs min-h-[46px] transition-all">
-          {hoveredPart ? (
+          {inspectedPart ? (
             <>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping" />
                 <span className="font-bold text-slate-900 dark:text-slate-100 font-geometric text-sm">
-                  {hoveredPart.partName || hoveredPart.name}
+                  {inspectedPart.partName || inspectedPart.name}
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 font-mono">
-                  {getPartIdentifier(hoveredPart.partName, hoveredPart.internalName)}
+                  {getPartIdentifier(inspectedPart.partName, inspectedPart.internalName)}
                 </span>
-                {hoveredPart.assemblyNumber && (
+                {inspectedPart.assemblyNumber && (
                   <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-mono">
-                    Cab #{hoveredPart.assemblyNumber}
+                    Cab #{inspectedPart.assemblyNumber}
                   </span>
                 )}
               </div>
 
               <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 text-[11px]">
-                {hoveredPart.assemblyName && (
+                {inspectedPart.assemblyName && (
                   <span>
-                    <strong>Cabinet:</strong> {hoveredPart.assemblyName}
+                    <strong>Cabinet:</strong> {inspectedPart.assemblyName}
                   </span>
                 )}
                 <span>
-                  <strong>Cut Size:</strong> {hoveredPart.w.toFixed(1)}" × {hoveredPart.h.toFixed(1)}"
+                  <strong>Cut Size:</strong> {inspectedPart.w.toFixed(1)}" × {inspectedPart.h.toFixed(1)}"
                 </span>
                 <span className="font-mono">
-                  ({((hoveredPart.w * hoveredPart.h) / 144).toFixed(2)} sq ft)
+                  ({((inspectedPart.w * inspectedPart.h) / 144).toFixed(2)} sq ft)
                 </span>
-                {hoveredPart.rotated && (
+                {inspectedPart.rotated && (
                   <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-semibold">
                     Rotated 90°
                   </span>
                 )}
                 {(() => {
-                  const isHoveredLocked = localGrainLocks[hoveredPart.id] !== undefined
-                    ? localGrainLocks[hoveredPart.id]
-                    : Boolean(hoveredPart.grainLocked);
+                  const isHoveredLocked = localGrainLocks[inspectedPart.id] !== undefined
+                    ? localGrainLocks[inspectedPart.id]
+                    : Boolean(inspectedPart.grainLocked);
                   return isHoveredLocked ? (
-                    <span
-                      onClick={(e) => handlePartContextMenu(e, hoveredPart)}
+                    <button
+                      type="button"
+                      onClick={(e) => handlePartContextMenu(e, inspectedPart)}
                       className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-[10px] font-bold cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors flex items-center gap-1 shadow-xs"
-                      title="Right-click part on sheet (or click here) to unlock grain direction"
+                      title="Click here or right-click part on sheet to unlock grain direction"
                     >
                       <Icon name="lock" className="text-xs" />
-                      <span>Grain Locked (Right-Click to Unlock)</span>
-                    </span>
+                      <span>Grain Locked (Click to Unlock)</span>
+                    </button>
                   ) : (
-                    <span
-                      onClick={(e) => handlePartContextMenu(e, hoveredPart)}
+                    <button
+                      type="button"
+                      onClick={(e) => handlePartContextMenu(e, inspectedPart)}
                       className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-1 shadow-xs"
-                      title="Right-click part on sheet (or click here) to re-lock grain direction"
+                      title="Click here or right-click part on sheet to re-lock grain direction"
                     >
                       <Icon name="lock_open" className="text-xs" />
-                      <span>Grain Unlocked (Right-Click to Lock)</span>
-                    </span>
+                      <span>Grain Unlocked (Click to Lock)</span>
+                    </button>
                   );
                 })()}
               </div>
@@ -493,6 +522,7 @@ export default function SvgNestModal({
                   className="cursor-pointer transition-all duration-150"
                   onMouseEnter={() => setHoveredPart({ ...part, grainLocked: isPartLocked })}
                   onMouseLeave={() => setHoveredPart(null)}
+                  onClick={() => setSelectedPart({ ...part, grainLocked: isPartLocked })}
                   onContextMenu={(e) => handlePartContextMenu(e, { ...part, grainLocked: isPartLocked })}
                 >
                   <title>
@@ -559,7 +589,7 @@ export default function SvgNestModal({
               Total Job Sheets: <strong className="text-slate-800 dark:text-slate-100 font-mono">{nestResult?.totalSheets || (hasNoPlacedSheets ? 0 : 1)}</strong>
             </span>
             <span>
-              With Buffer (+10%): <strong className="text-blue-700 dark:text-blue-400 font-mono">{nestResult?.bufferedSheets || (hasNoPlacedSheets ? 0 : 1)}</strong>
+              With Buffer (+{wasteBufferPercent}%): <strong className="text-blue-700 dark:text-blue-400 font-mono">{nestResult?.bufferedSheets ?? (hasNoPlacedSheets ? 0 : 1)}</strong>
             </span>
             <span>
               Total Placed Parts: <strong className="text-slate-800 dark:text-slate-100 font-mono">{nestResult?.placedPartsCount || 0}</strong>
@@ -591,6 +621,6 @@ export default function SvgNestModal({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

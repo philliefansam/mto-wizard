@@ -5,6 +5,7 @@ import MaterialWizard from './components/MaterialWizard';
 import CutlistImporter from './components/CutlistImporter';
 import MtoDocumentPanel from './components/MtoDocumentPanel';
 import ErrorBoundary from './components/ErrorBoundary';
+import ConfirmDialog from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
 import { getSystemUsername, formatUsernameAsEngineer } from './utils/fileSystem';
 
@@ -29,12 +30,14 @@ export default function App() {
     }
   };
 
-  // Unified Project State (persisted to sessionStorage for the active session)
+  // Unified Project State (persisted to localStorage draft with one-time sessionStorage fallback)
   const [jobData, setJobData] = useState(() => {
     try {
+      const localSaved = localStorage.getItem('mto_job_data_draft');
       const sessionSaved = sessionStorage.getItem('mto_job_data');
-      if (sessionSaved) {
-        const parsed = JSON.parse(sessionSaved);
+      const raw = localSaved || sessionSaved;
+      if (raw) {
+        const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
           return {
             ...parsed,
@@ -54,12 +57,24 @@ export default function App() {
     };
   });
 
-  // Keep sessionStorage in sync with jobData during active session
+  // Keep localStorage draft in sync with jobData so accidental tab closes do not lose work
   useEffect(() => {
     try {
-      sessionStorage.setItem('mto_job_data', JSON.stringify(jobData));
+      localStorage.setItem('mto_job_data_draft', JSON.stringify(jobData));
     } catch {}
   }, [jobData]);
+
+  // Warn before closing tab if active takeoff has unsaved items or hardware
+  useEffect(() => {
+    const hasUnsaved = (jobData.items?.length || 0) > 0 || (jobData.hardware?.length || 0) > 0;
+    if (!hasUnsaved) return;
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [jobData.items?.length, jobData.hardware?.length]);
 
   // Resolve PC username asynchronously on mount if engineer is not already set
   useEffect(() => {
@@ -145,6 +160,11 @@ export default function App() {
     } catch {}
 
     const root = document.documentElement;
+    root.style.colorScheme = effectiveTheme;
+    const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
+    if (metaColorScheme) {
+      metaColorScheme.setAttribute('content', themeMode === 'system' ? 'light dark' : effectiveTheme);
+    }
     if (effectiveTheme === 'dark') {
       root.classList.add('dark');
       root.setAttribute('data-theme', 'dark');
@@ -157,6 +177,7 @@ export default function App() {
 
   // Left Inflow Switcher Tab: 'wizard' | 'nesting'
   const [activeLeftTab, setActiveLeftTab] = useState('wizard');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Push new line items to MTO document
   const handleAddItems = (newItems = []) => {
@@ -167,23 +188,27 @@ export default function App() {
   };
 
   // Reset Project State
-  const handleReset = async () => {
-    if (confirm('Reset all project data and clear takeoff items?')) {
-      try {
-        sessionStorage.removeItem('mto_job_data');
-      } catch {}
-      const eng = (await getSystemUsername()) || getInitialEngineer();
-      setJobData({
-        jobName: '',
-        jobNumber: '',
-        engineer: eng,
-        date: getTodayFormatted(),
-        items: [],
-        hardware: [],
-      });
-      setLinkedFolder(null);
-      setDetectedFiles({ mtoFiles: [], cvExports: [] });
-    }
+  const handleReset = () => {
+    setShowResetConfirm(true);
+  };
+
+  const confirmReset = async () => {
+    setShowResetConfirm(false);
+    try {
+      localStorage.removeItem('mto_job_data_draft');
+      sessionStorage.removeItem('mto_job_data');
+    } catch {}
+    const eng = (await getSystemUsername()) || getInitialEngineer();
+    setJobData({
+      jobName: '',
+      jobNumber: '',
+      engineer: eng,
+      date: getTodayFormatted(),
+      items: [],
+      hardware: [],
+    });
+    setLinkedFolder(null);
+    setDetectedFiles({ mtoFiles: [], cvExports: [] });
   };
 
   return (
@@ -206,7 +231,7 @@ export default function App() {
             />
 
             {/* Split Workspace Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* ================= LEFT PANEL: INFLOW BUILDER (58% ~ 7 cols) ================= */}
               <div className="lg:col-span-7 space-y-4 no-print">
                 {/* Top Inflow Tab Switcher */}
@@ -264,9 +289,18 @@ export default function App() {
                   setShowSubstrateTag={setShowSubstrateTag}
                 />
               </div>
-            </div>
+            </main>
           </div>
         </div>
+        <ConfirmDialog
+          isOpen={showResetConfirm}
+          title="Reset Takeoff Project?"
+          message="This will clear all job metadata, material takeoff items, and hardware lines from the current workspace."
+          confirmLabel="Reset Project"
+          variant="danger"
+          onConfirm={confirmReset}
+          onCancel={() => setShowResetConfirm(false)}
+        />
       </ToastProvider>
     </ErrorBoundary>
   );

@@ -58,12 +58,25 @@ export default function HardwareModal({
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [image, setImage] = useState('');
+  const [imageZoom, setImageZoom] = useState(1);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const fileInputRef = useRef(null);
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
 
   // Initialize or reset form on open
   useEffect(() => {
@@ -76,6 +89,8 @@ export default function HardwareModal({
         setSize(initialData.size || '');
         setColor(initialData.color || '');
         setImage(initialData.image || '');
+        setImageZoom(Number(initialData.imageZoom) > 0 ? Number(initialData.imageZoom) : 1);
+        setImageLoadError(false);
         setImageUrlInput(initialData.image && initialData.image.startsWith('http') ? initialData.image : '');
         setShowUrlInput(Boolean(initialData.image && initialData.image.startsWith('http')));
       } else {
@@ -86,6 +101,8 @@ export default function HardwareModal({
         setSize('');
         setColor('');
         setImage('');
+        setImageZoom(1);
+        setImageLoadError(false);
         setImageUrlInput('');
         setShowUrlInput(false);
       }
@@ -93,14 +110,14 @@ export default function HardwareModal({
     }
   }, [isOpen, initialData]);
 
-  if (!isOpen) return null;
-
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
       const optimized = await optimizeImageFile(file);
       if (optimized) {
         setImage(optimized);
+        setImageZoom(1);
+        setImageLoadError(false);
       }
     }
   };
@@ -113,19 +130,43 @@ export default function HardwareModal({
       const optimized = await optimizeImageFile(file);
       if (optimized) {
         setImage(optimized);
+        setImageZoom(1);
+        setImageLoadError(false);
       }
     }
   };
 
+  const isSafeUrl = (val, allowDataImage = false) => {
+    if (!val) return true;
+    const trimmed = val.trim();
+    if (allowDataImage && /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(trimmed)) return true;
+    try {
+      const parsed = new URL(trimmed);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   const handleApplyImageUrl = () => {
-    if (imageUrlInput.trim()) {
-      setImage(imageUrlInput.trim());
+    const candidate = imageUrlInput.trim();
+    if (candidate) {
+      if (!isSafeUrl(candidate, true)) {
+        setErrorMsg('Image URL must use https://, http://, or an image data URI.');
+        return;
+      }
+      setErrorMsg('');
+      setImage(candidate);
+      setImageZoom(1);
+      setImageLoadError(false);
       setShowUrlInput(false);
     }
   };
 
   const handleClearImage = () => {
     setImage('');
+    setImageZoom(1);
+    setImageLoadError(false);
     setImageUrlInput('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -141,6 +182,10 @@ export default function HardwareModal({
       setErrorMsg('Quantity must be a positive number (1 or more).');
       return;
     }
+    if (url.trim() && !isSafeUrl(url.trim(), false)) {
+      setErrorMsg('Product / Supplier URL must start with http:// or https://.');
+      return;
+    }
 
     onSave({
       id: initialData?.id || undefined,
@@ -151,6 +196,7 @@ export default function HardwareModal({
       size: size.trim(),
       color: color.trim(),
       image: image.trim(),
+      imageZoom: Number(imageZoom) || 1,
     });
 
     onClose();
@@ -166,15 +212,20 @@ export default function HardwareModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-labelledby="hardware-modal-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      onCancel={(e) => {
+        if (e.target !== dialogRef.current) return;
+        e.preventDefault();
+        onClose();
       }}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) onClose();
+      }}
+      className="m-auto p-0 bg-transparent border-0 max-w-2xl sm:max-w-[700px] w-[calc(100%-2rem)] backdrop:bg-black/60 backdrop:backdrop-blur-sm no-print"
     >
+      {isOpen && (
       <div className="bg-white dark:bg-[#202124] border border-slate-200 dark:border-[#3c4043] rounded-2xl shadow-2xl max-w-2xl sm:max-w-[700px] w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-800 dark:text-[#e8eaed] font-sans">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-[#3c4043] flex items-center justify-between bg-slate-50 dark:bg-[#28292c]">
@@ -232,18 +283,29 @@ export default function HardwareModal({
                   isDragging
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 scale-105'
                     : image
-                    ? 'border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800'
+                    ? 'border-slate-300 dark:border-slate-600 bg-white'
                     : 'border-slate-300 dark:border-slate-600 hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/60 bg-slate-50 dark:bg-slate-800/40'
                 }`}
                 title={image ? 'Hardware picture' : 'Click or drop picture here to upload'}
               >
                 {image ? (
                   <>
-                    <img
-                      src={image}
-                      alt="Hardware preview"
-                      className="w-full h-full object-cover"
-                    />
+                    {imageLoadError ? (
+                      <div className="flex flex-col items-center justify-center text-center p-3 text-slate-400 dark:text-slate-500">
+                        <Icon name="image" className="text-2xl mb-1" />
+                        <span className="text-[10px] font-semibold leading-tight">
+                          Preview unavailable
+                        </span>
+                      </div>
+                    ) : (
+                      <img
+                        src={image}
+                        alt="Hardware preview"
+                        onError={() => setImageLoadError(true)}
+                        className="w-full h-full object-contain p-1 transition-transform duration-75"
+                        style={{ transform: imageZoom !== 1 ? `scale(${imageZoom})` : undefined }}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -271,8 +333,35 @@ export default function HardwareModal({
                 type="file"
                 accept="image/*"
                 onChange={handleFileSelect}
+                onCancel={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 className="hidden"
               />
+
+              {image && !imageLoadError && (
+                <div className="mt-2 w-36 flex items-center gap-1.5 px-1" title="Zoom image for edge cases">
+                  <Icon name="zoom_in" className="text-xs text-slate-400 dark:text-slate-500 shrink-0" />
+                  <input
+                    id="hw-image-zoom"
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.05"
+                    value={imageZoom}
+                    onChange={(e) => setImageZoom(parseFloat(e.target.value))}
+                    aria-label="Image zoom"
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImageZoom(1)}
+                    className="text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 shrink-0 min-w-[2.25rem] text-right"
+                    title="Reset zoom to 100%"
+                  >
+                    {Math.round(imageZoom * 100)}%
+                  </button>
+                </div>
+              )}
 
               {/* URL or Toggle Link (matches w-36 photo box) */}
               <div className="mt-2 w-36 text-center">
@@ -436,16 +525,20 @@ export default function HardwareModal({
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
               <span>Takeoff Line Preview:</span>
               <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-normal">
-                [(QTY)]-[NAME]-[SIZE]-[COLOR]
+                (QTY)-[NAME]-[SIZE]-[COLOR]
               </span>
             </div>
             <div className="p-3.5 sm:p-4 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3.5">
-              {image ? (
-                <img
-                  src={image}
-                  alt="Thumbnail"
-                  className="w-11 h-11 object-cover rounded-lg border border-slate-300 dark:border-slate-700 shrink-0 shadow-sm"
-                />
+              {image && !imageLoadError ? (
+                <div className="w-11 h-11 rounded-lg border border-slate-300 dark:border-slate-700 bg-white overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
+                  <img
+                    src={image}
+                    alt="Thumbnail"
+                    onError={() => setImageLoadError(true)}
+                    className="w-full h-full object-contain p-0.5 transition-transform duration-75"
+                    style={{ transform: imageZoom !== 1 ? `scale(${imageZoom})` : undefined }}
+                  />
+                </div>
               ) : (
                 <div className="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
                   <Icon name="image" className="text-xl" />
@@ -476,6 +569,7 @@ export default function HardwareModal({
           </div>
         </form>
       </div>
-    </div>
+      )}
+    </dialog>
   );
 }
